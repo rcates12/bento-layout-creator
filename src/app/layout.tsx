@@ -17,9 +17,39 @@ const notoSerifDisplay = Noto_Serif_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Lintel",
+  title: "Lintel — Visual Bento Layout Builder",
   description:
-    "Visual bento layout builder — craft grid layouts and export clean Tailwind CSS markup.",
+    "Visual bento layout builder — craft grid layouts and export clean Tailwind HTML, standalone HTML, or React JSX. No sign-up required.",
+  metadataBase: new URL("https://lintel.design"),
+  openGraph: {
+    title: "Lintel — Visual Bento Layout Builder",
+    description:
+      "Visual bento layout builder — craft grid layouts and export clean Tailwind HTML, standalone HTML, or React JSX. No sign-up required.",
+    url: "https://lintel.design",
+    siteName: "Lintel",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Lintel — Visual Bento Layout Builder",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Lintel — Visual Bento Layout Builder",
+    description:
+      "Visual bento layout builder — craft grid layouts and export clean Tailwind HTML, standalone HTML, or React JSX. No sign-up required.",
+    images: ["/og-image.png"],
+  },
+  icons: {
+    icon: "/favicon.ico",
+  },
+  alternates: {
+    canonical: "https://lintel.design",
+  },
 };
 
 export default function RootLayout({

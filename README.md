@@ -1,8 +1,8 @@
-# Lintel - bento/layout creator.
+# Lintel
 
-https://lintel.design/
+**[lintel.design](https://lintel.design)** — Visual bento layout builder. Craft grid layouts in the browser and export production-ready code. No sign-up required.
 
-A visual, browser-based tool for building **bento-style grid layouts** and exporting the result as production-ready code — Tailwind HTML, standalone HTML, or React JSX.
+![Lintel](public/og-image.png)
 
 ---
 
@@ -47,7 +47,6 @@ Bento grids are popular in modern product pages, portfolio sites, and dashboards
 ### UX
 - **Undo / Redo** (Ctrl+Z / Ctrl+Y) with full history
 - **Auto-save** — layout persists in `localStorage` across page refreshes
-- **Light / Dark mode** toggle
 - Full **keyboard navigation** (Delete to remove cell, Escape to deselect, Ctrl+D to duplicate)
 
 ---
@@ -109,7 +108,6 @@ src/
 │   │   ├── GridControls.tsx # Sidebar panel — columns, rows, gap
 │   │   ├── CodeOutput.tsx   # Syntax-highlighted code export panel
 │   │   ├── PresetPicker.tsx # Collapsible preset grid
-│   │   ├── ThemeToggle.tsx  # Light/dark toggle
 │   │   ├── Tooltip.tsx      # Thin wrapper around shadcn Tooltip
 │   │   └── StatusBanner.tsx # Info/warning inline banners
 │   └── ui/                  # shadcn/ui components (button, input, select, etc.)
@@ -135,7 +133,7 @@ Color tokens are defined in `globals.css` under `@theme` (light defaults) and `.
 
 ## Roadmap
 
-- [ ] Deploy to Vercel with public URL
+- [x] Deploy to Vercel — live at [lintel.design](https://lintel.design)
 - [ ] Custom colour picker (hex input + eyedropper)
 - [ ] Cell padding/alignment controls
 - [ ] Export as CSS Grid (no Tailwind dependency)
