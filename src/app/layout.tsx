@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Noto_Serif_Display } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const ibmPlexMono = IBM_Plex_Mono({
@@ -58,6 +59,7 @@ export default function RootLayout({
     <html lang="en" className={`${ibmPlexMono.variable} ${notoSerifDisplay.variable} dark`}>
       <body className="h-full overflow-hidden">
         {children}
+        <Analytics />
       </body>
     </html>
   );
