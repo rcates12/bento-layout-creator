@@ -1,8 +1,8 @@
-# Bento Layout Creator
+# Lintel - bento/layout creator.
+
+https://lintel.design/
 
 A visual, browser-based tool for building **bento-style grid layouts** and exporting the result as production-ready code — Tailwind HTML, standalone HTML, or React JSX.
-
-![Bento Layout Creator](public/og-preview.png)
 
 ---
 
