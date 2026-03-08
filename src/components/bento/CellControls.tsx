@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   DndContext,
   closestCenter,
@@ -357,6 +357,19 @@ function ColorPicker({
   value: string;
   onChange: (hex: string) => void;
 }) {
+  const [hexInput, setHexInput] = useState(value);
+
+  // Keep local input in sync when value changes externally (e.g. swatch click)
+  useEffect(() => {
+    setHexInput(value);
+  }, [value]);
+
+  function handleHexInput(raw: string) {
+    const v = raw.startsWith("#") ? raw : `#${raw}`;
+    setHexInput(v);
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v);
+  }
+
   const isPreset = QUICK_COLORS.some((c) => c.hex.toLowerCase() === value.toLowerCase()) ||
     EARTH_TONES.some((c) => c.hex.toLowerCase() === value.toLowerCase());
 
@@ -425,33 +438,35 @@ function ColorPicker({
             </PopoverButton>
           </Tooltip>
           <PopoverPanel
-            anchor={{ to: "bottom start", gap: 8 }}
-            className="z-[9999] w-52 rounded-xl border border-rim bg-surface-hi p-3 shadow-2xl shadow-black/60"
+            anchor={{ to: "bottom end", gap: 8 }}
+            className="z-[9999] w-60 overflow-hidden rounded-xl border border-rim bg-surface-hi p-3 shadow-2xl shadow-black/60"
           >
-            <HexColorPicker color={value} onChange={onChange} />
-            <div className="mt-2 flex items-center gap-2">
-              <div
-                className="h-5 w-5 shrink-0 rounded border border-rim"
-                style={{ backgroundColor: value }}
-                aria-hidden="true"
-              />
-              <Input
-                type="text"
-                value={value}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v);
-                }}
-                spellCheck={false}
-                autoComplete="off"
-                className="h-6 flex-1 font-mono text-[11px] text-muted"
-              />
-            </div>
+            {({ close }) => (
+              <div className="flex flex-col gap-2">
+                <HexColorPicker color={value} onChange={(c) => { onChange(c); setHexInput(c); }} style={{ width: "100%" }} />
+                <div className="flex items-center gap-2">
+                  <div
+                    className="h-5 w-5 shrink-0 rounded border border-rim"
+                    style={{ backgroundColor: value }}
+                    aria-hidden="true"
+                  />
+                  <Input
+                    type="text"
+                    value={hexInput}
+                    onChange={(e) => handleHexInput(e.target.value)}
+                    onBlur={() => { if (!/^#[0-9a-fA-F]{6}$/.test(hexInput)) setHexInput(value); }}
+                    spellCheck={false}
+                    autoComplete="off"
+                    className="h-6 w-40 font-mono text-[11px] text-muted"
+                  />
+                </div>
+              </div>
+            )}
           </PopoverPanel>
         </Popover>
       </div>
 
-      {/* Hex display */}
+      {/* Hex input below swatches */}
       <div className="flex items-center gap-2">
         <div
           className="h-5 w-5 shrink-0 rounded border border-rim"
@@ -460,13 +475,12 @@ function ColorPicker({
         />
         <Input
           type="text"
-          value={value}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v);
-          }}
+          value={hexInput}
+          onChange={(e) => handleHexInput(e.target.value)}
+          onBlur={() => { if (!/^#[0-9a-fA-F]{6}$/.test(hexInput)) setHexInput(value); }}
           spellCheck={false}
           autoComplete="off"
+          placeholder="#000000"
           className="h-6 flex-1 font-mono text-[11px] text-muted"
         />
       </div>
