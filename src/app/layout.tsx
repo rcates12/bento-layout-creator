@@ -44,9 +44,6 @@ export const metadata: Metadata = {
       "Visual bento layout builder — craft grid layouts and export clean Tailwind HTML, standalone HTML, or React JSX. No sign-up required.",
     images: ["/og-image.png"],
   },
-  icons: {
-    icon: "/favicon.ico",
-  },
   alternates: {
     canonical: "https://lintel.design",
   },
