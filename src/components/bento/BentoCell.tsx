@@ -262,7 +262,7 @@ export function BentoCell({
         "touch-manipulation select-none",
         "transition-[border-color,box-shadow] duration-150",
         isSelected
-          ? "border-accent ring-2 ring-accent ring-offset-2 ring-offset-canvas"
+          ? "border-accent ring-2 ring-accent/50 ring-offset-2 ring-offset-canvas"
           : "border-white/[0.07] hover:border-white/[0.16]",
       ].join(" ")}
       onClick={onClick}
@@ -442,7 +442,7 @@ export function BentoCellOverlay({
   return (
     <div
       style={overlayStyle}
-      className={`relative flex flex-col gap-2 overflow-hidden border border-white/20 p-3 pt-7 shadow-2xl ring-2 ring-accent ring-offset-2 ring-offset-canvas ${radiusClass}`}
+      className={`relative flex flex-col gap-2 overflow-hidden border border-white/20 p-3 pt-7 shadow-2xl ring-2 ring-accent/50 ring-offset-2 ring-offset-canvas ${radiusClass}`}
     >
       {cell.bgImage && (
         <div className="pointer-events-none absolute inset-0 bg-black/40" aria-hidden="true" />
