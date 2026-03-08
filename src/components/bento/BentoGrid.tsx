@@ -17,6 +17,55 @@ import type { BentoCell as BentoCellType, BentoConfig, ContentBlock } from "@/li
 import { GAP_PX, getEmptyPositions, hasOverlap } from "@/lib/bento/utils";
 import { pointerToGridPosition } from "@/lib/bento/gridCollision";
 
+// ─── Ghost tile ───────────────────────────────────────────────────────────────
+
+function GhostTile({
+  col,
+  row,
+  onAdd,
+}: {
+  col: number;
+  row: number;
+  onAdd: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={onAdd}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
+      aria-label={`Add cell at column ${col}, row ${row}`}
+      style={{ gridColumn: col, gridRow: row }}
+      className={[
+        "h-full w-full flex items-center justify-center rounded-xl border border-dashed",
+        "transition-all duration-150 outline-none cursor-pointer",
+        "focus-visible:border-white/50 focus-visible:bg-white/10 focus-visible:opacity-100",
+        hovered
+          ? "border-white/40 bg-white/5 opacity-100"
+          : "border-white/15 opacity-0",
+      ].join(" ")}
+    >
+      {hovered && (
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="white"
+          strokeWidth="1.5"
+          aria-hidden="true"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ResizeState {
@@ -50,44 +99,6 @@ interface BentoGridProps {
   canAddCell: boolean;
   colHoverDelta?: 1 | -1 | null;
   rowHoverDelta?: 1 | -1 | null;
-}
-
-// ─── Ghost tile ───────────────────────────────────────────────────────────────
-
-function GhostTile({
-  col,
-  row,
-  onAdd,
-}: {
-  col: number;
-  row: number;
-  onAdd: () => void;
-}) {
-  return (
-    <Button
-      variant="ghost"
-      onClick={onAdd}
-      aria-label={`Add cell at column ${col}, row ${row}`}
-      style={{
-        gridColumn: col,
-        gridRow: row,
-        zIndex: 0,
-      }}
-      className="h-full w-full rounded-xl border border-dashed border-rim/60 bg-transparent text-ghost opacity-0 transition-opacity duration-200 hover:border-ghost hover:bg-surface-hi/50 hover:opacity-100 focus-visible:opacity-100"
-    >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        aria-hidden="true"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-      </svg>
-    </Button>
-  );
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────

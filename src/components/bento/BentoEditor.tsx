@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Undo2, Redo2, ChevronDown } from "lucide-react";
+import { Undo2, Redo2, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Tooltip } from "./Tooltip";
 import type { BentoConfig, BentoCell, GridConfig, ContentBlock } from "@/lib/bento/types";
 import { generateCode, generateStandaloneHTML, generateReactJSX } from "@/lib/bento/generator";
 import {
@@ -20,7 +20,6 @@ import { CellControls } from "./CellControls";
 import { CodeOutput } from "./CodeOutput";
 import { PresetPicker } from "./PresetPicker";
 import { StatusBanner } from "./StatusBanner";
-import { ThemeToggle } from "./ThemeToggle";
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
@@ -533,9 +532,6 @@ export function BentoEditor() {
   const [colHoverDelta, setColHoverDelta] = useState<1 | -1 | null>(null);
   const [rowHoverDelta, setRowHoverDelta] = useState<1 | -1 | null>(null);
 
-  // How-to section collapsed state (persisted)
-  const [howToOpen, setHowToOpen] = useState(false);
-
   // Persist config to localStorage whenever it changes
   useEffect(() => {
     saveToStorage(config);
@@ -600,130 +596,25 @@ export function BentoEditor() {
       </a>
 
       {/* Header */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-rim/60 bg-surface/90 backdrop-blur-md px-5">
-        <div className="flex items-center gap-3">
-          <div
-            className="flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-700 shadow-[0_2px_10px_rgba(124,58,237,0.45)]"
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-rim bg-surface px-4">
+        <div className="flex items-center gap-2">
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 1200 1200"
+            fill="white"
+            xmlns="http://www.w3.org/2000/svg"
             aria-hidden="true"
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              className="text-canvas"
-            >
-              <rect x="3" y="3" width="7" height="9" rx="1" />
-              <rect x="14" y="3" width="7" height="5" rx="1" />
-              <rect x="14" y="12" width="7" height="9" rx="1" />
-              <rect x="3" y="16" width="7" height="5" rx="1" />
-            </svg>
-          </div>
-          <h1 className="text-sm font-semibold tracking-tight text-cream">
-            Bento Creator
+            <path d="m1136 424.97v-299.21l-256.97-125.76-558.32 272.11v251.81l-257.16 125.53v298.97l514.6 251.58 558.1-272.58v-299.63l-208.03-101.77zm-514.6 0 471.52-230.11v202.82l-471.52 230.11zm-43.266 475.82-214.13 104.34v-204.14l214.13-104.58 257.63-125.58v203.06l-257.63 125.58zm514.82 0-471.56 229.92v-203.29l257.63-126.42 213.89-104.34z" />
+          </svg>
+          <h1 className="font-serif text-2xl font-normal tracking-wide text-cream">
+            Lintel
           </h1>
-          <span className="hidden rounded-full border border-accent/20 bg-accent/8 px-2 py-0.5 text-[10px] font-medium text-accent dark:text-accent-hi sm:inline">
-            Phase 4
-          </span>
         </div>
 
         {/* Header actions */}
         <div className="flex items-center gap-2">
-          {/* Undo button */}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={undo}
-            disabled={!canUndo}
-            aria-label="Undo last action (Ctrl+Z)"
-            title="Undo (Ctrl+Z)"
-          >
-            <Undo2 size={14} aria-hidden="true" />
-          </Button>
-
-          {/* Redo button */}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={redo}
-            disabled={!canRedo}
-            aria-label="Redo last action (Ctrl+Y)"
-            title="Redo (Ctrl+Y)"
-          >
-            <Redo2 size={14} aria-hidden="true" />
-          </Button>
-
-          <Separator orientation="vertical" className="mx-1 h-5 bg-rim-hi/70 dark:bg-rim-hi/40" />
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => dispatch({ type: "RESET" })}
-            aria-label="Reset layout to default"
-          >
-            Reset
-          </Button>
-
-          <Separator orientation="vertical" className="mx-1 h-5 bg-rim-hi/70 dark:bg-rim-hi/40" />
-
-          <ThemeToggle />
-        </div>
-      </header>
-
-      {/* Body */}
-      <div className="flex min-h-0 flex-1">
-        {/* Sidebar */}
-        <aside
-          className="flex w-72 shrink-0 flex-col gap-5 overflow-x-hidden overflow-y-auto border-r border-rim/60 iso-sidebar p-4"
-          aria-label="Configuration panel"
-        >
-          {/* How to use — collapsible */}
-          <section aria-label="How to use">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setHowToOpen((v) => !v)}
-              aria-expanded={howToOpen}
-              className="w-full justify-between px-0 text-[11px] font-semibold uppercase tracking-wider text-muted hover:bg-transparent hover:text-cream"
-            >
-              <span>How to use</span>
-              <ChevronDown
-                size={12}
-                aria-hidden="true"
-                className={`transition-transform duration-200 ${howToOpen ? "rotate-180" : ""}`}
-              />
-            </Button>
-            {howToOpen && (
-              <ul className="mt-2 flex flex-col gap-1.5">
-                {[
-                  "Pick a preset or build from scratch",
-                  "Use +/− buttons to add or remove columns and rows",
-                  "Click a ghost tile (+) on the canvas to add a cell",
-                  "Hover a cell to see the quick-add bar — add text, image, or button blocks directly",
-                  "Drag the dot-handle at the top of a cell to move it",
-                  "Drag the corner handle or scroll on a selected cell to resize",
-                  "Click a cell to edit its properties in the sidebar",
-                  "Use ↑ / ↓ arrows in a content block card to reorder blocks",
-                  "Press Delete to remove the selected cell (when not typing)",
-                  "Press Escape to deselect the current cell",
-                  "Press Ctrl+D to duplicate the selected cell",
-                  "Use Ctrl+Z / Ctrl+Y to undo and redo",
-                  "Your layout is auto-saved in the browser",
-                  "Copy the generated code from the Export panel below",
-                ].map((tip) => (
-                  <li key={tip} className="flex items-start gap-1.5">
-                    <span className="mt-[3px] shrink-0 text-accent" aria-hidden="true">·</span>
-                    <span className="text-[11px] leading-relaxed text-muted/80">{tip}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <Separator className="bg-rim-hi/70 dark:bg-rim-hi/40" />
-
           {/* Presets */}
           <PresetPicker
             onApplyPreset={(presetConfig) =>
@@ -732,68 +623,146 @@ export function BentoEditor() {
             onFillRegular={() => dispatch({ type: "FILL_REGULAR" })}
           />
 
-          <Separator className="bg-rim-hi/70 dark:bg-rim-hi/40" />
-
-          {/* Grid settings */}
-          <GridControls
-            grid={config.grid}
-            onUpdate={(partial) =>
-              dispatch({ type: "UPDATE_GRID", payload: partial })
+          {/* Help */}
+          <Tooltip
+            content={
+              <div className="flex flex-col gap-1 text-xs leading-relaxed">
+                <p className="font-semibold text-cream mb-0.5">Keyboard shortcuts</p>
+                <span>Click ghost tile <kbd className="rounded bg-rim px-1">+</kbd> to add a cell</span>
+                <span>Drag dot-handle to move cells</span>
+                <span>Drag corner handle to resize</span>
+                <span><kbd className="rounded bg-rim px-1">Del</kbd> delete selected cell</span>
+                <span><kbd className="rounded bg-rim px-1">Esc</kbd> deselect</span>
+                <span><kbd className="rounded bg-rim px-1">Ctrl+D</kbd> duplicate</span>
+                <span><kbd className="rounded bg-rim px-1">Ctrl+Z / Y</kbd> undo / redo</span>
+              </div>
             }
-            onColHoverDelta={setColHoverDelta}
-            onRowHoverDelta={setRowHoverDelta}
-          />
+            side="bottom"
+          >
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Show keyboard shortcuts and tips"
+              className="h-8 w-8 border-0 bg-[#696969] font-bold text-[#000000] hover:bg-[#575757]"
+            >
+              <HelpCircle size={15} aria-hidden="true" />
+            </Button>
+          </Tooltip>
 
-          <Separator className="bg-rim-hi/70 dark:bg-rim-hi/40" />
+          {/* Undo / Redo group */}
+          <div className="flex overflow-hidden rounded-lg border border-rim/60 bg-surface-hi">
+            <Tooltip content="Undo (Ctrl+Z)" side="bottom">
+              <button
+                type="button"
+                onClick={undo}
+                disabled={!canUndo}
+                aria-label="Undo last action (Ctrl+Z)"
+                className="flex h-8 w-8 items-center justify-center text-muted transition-colors hover:bg-hover/60 hover:text-cream/90 disabled:opacity-30"
+              >
+                <Undo2 size={15} aria-hidden="true" />
+              </button>
+            </Tooltip>
+            <div className="w-px bg-rim/60" />
+            <Tooltip content="Redo (Ctrl+Y)" side="bottom">
+              <button
+                type="button"
+                onClick={redo}
+                disabled={!canRedo}
+                aria-label="Redo last action (Ctrl+Y)"
+                className="flex h-8 w-8 items-center justify-center text-muted transition-colors hover:bg-hover/60 hover:text-cream/90 disabled:opacity-30"
+              >
+                <Redo2 size={15} aria-hidden="true" />
+              </button>
+            </Tooltip>
+          </div>
 
-          {/* Cell settings */}
-          {selectedCell ? (
-            <CellControls
-              cell={selectedCell}
+          {/* Reset */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => dispatch({ type: "RESET" })}
+            aria-label="Reset layout to default"
+            className="h-8 border-0 bg-[#696969] text-xs font-bold text-[#000000] hover:bg-[#575757]"
+          >
+            Reset
+          </Button>
+        </div>
+      </header>
+
+      {/* Body */}
+      <div className="flex min-h-0 flex-1">
+        {/* Sidebar */}
+        <aside
+          className="flex w-[320px] shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-rim bg-surface"
+          aria-label="Configuration panel"
+        >
+          {/* Grid settings panel */}
+          <div className="px-4 py-4">
+            <GridControls
               grid={config.grid}
-              cells={config.cells}
-              onUpdate={(updates) =>
-                dispatch({
-                  type: "UPDATE_CELL",
-                  payload: { id: selectedCell.id, updates },
-                })
+              onUpdate={(partial) =>
+                dispatch({ type: "UPDATE_GRID", payload: partial })
               }
-              onDelete={() =>
-                dispatch({ type: "REMOVE_CELL", payload: selectedCell.id })
-              }
-              onAddBlock={(block) =>
-                dispatch({ type: "ADD_BLOCK", payload: { cellId: selectedCell.id, block } })
-              }
-              onUpdateBlock={(blockId, updates) =>
-                dispatch({ type: "UPDATE_BLOCK", payload: { cellId: selectedCell.id, blockId, updates } })
-              }
-              onRemoveBlock={(blockId) =>
-                dispatch({ type: "REMOVE_BLOCK", payload: { cellId: selectedCell.id, blockId } })
-              }
-              onSetBgImage={(src) =>
-                dispatch({ type: "SET_BG_IMAGE", payload: { cellId: selectedCell.id, src } })
-              }
-              onReorderBlock={(blockId, direction) =>
-                dispatch({ type: "REORDER_BLOCK", payload: { cellId: selectedCell.id, blockId, direction } })
-              }
-              onReorderBlocksFull={(blockIds) =>
-                dispatch({ type: "REORDER_BLOCKS_FULL", payload: { cellId: selectedCell.id, blockIds } })
-              }
-              onDuplicateCell={() =>
-                dispatch({ type: "DUPLICATE_CELL", payload: selectedCell.id })
-              }
-              canDuplicate={canAddCell}
+              onColHoverDelta={setColHoverDelta}
+              onRowHoverDelta={setRowHoverDelta}
             />
-          ) : (
-            <div className="flex flex-col gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-                Cell
-              </p>
-              <StatusBanner variant="info">
-                Click a cell on the canvas to edit its properties
-              </StatusBanner>
-            </div>
-          )}
+          </div>
+
+          {/* Full-bleed divider */}
+          <div className="shrink-0 h-px bg-rim" aria-hidden="true" />
+
+          {/* Cell settings panel */}
+          <div className="flex-1 px-4 py-4">
+            {selectedCell ? (
+              <CellControls
+                cell={selectedCell}
+                grid={config.grid}
+                cells={config.cells}
+                onUpdate={(updates) =>
+                  dispatch({
+                    type: "UPDATE_CELL",
+                    payload: { id: selectedCell.id, updates },
+                  })
+                }
+                onDelete={() =>
+                  dispatch({ type: "REMOVE_CELL", payload: selectedCell.id })
+                }
+                onAddBlock={(block) =>
+                  dispatch({ type: "ADD_BLOCK", payload: { cellId: selectedCell.id, block } })
+                }
+                onUpdateBlock={(blockId, updates) =>
+                  dispatch({ type: "UPDATE_BLOCK", payload: { cellId: selectedCell.id, blockId, updates } })
+                }
+                onRemoveBlock={(blockId) =>
+                  dispatch({ type: "REMOVE_BLOCK", payload: { cellId: selectedCell.id, blockId } })
+                }
+                onSetBgImage={(src) =>
+                  dispatch({ type: "SET_BG_IMAGE", payload: { cellId: selectedCell.id, src } })
+                }
+                onReorderBlocksFull={(blockIds) =>
+                  dispatch({ type: "REORDER_BLOCKS_FULL", payload: { cellId: selectedCell.id, blockIds } })
+                }
+                onDuplicateCell={() =>
+                  dispatch({ type: "DUPLICATE_CELL", payload: selectedCell.id })
+                }
+                canDuplicate={canAddCell}
+              />
+            ) : (
+              <div className="flex flex-col gap-2">
+                <p className="text-[13px] font-semibold text-cream">Cell</p>
+                <StatusBanner variant="info">
+                  Click a cell on the canvas to edit its properties
+                </StatusBanner>
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar footer */}
+          <div className="shrink-0 h-px bg-rim" aria-hidden="true" />
+          <div className="shrink-0 px-4 py-3 flex items-center justify-between">
+            <span className="text-[11px] text-sand/40">© {new Date().getFullYear()} Lintel</span>
+            <span className="text-[11px] text-sand/40">v0.1.0</span>
+          </div>
         </aside>
 
         {/* Main */}

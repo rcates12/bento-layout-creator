@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { Code2, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 
@@ -98,10 +99,10 @@ function tokenize(code: string): Array<{ type: string; value: string }> {
 const TOKEN_COLORS: Record<string, string> = {
   tag:       "text-blue-400",
   attr:      "text-sky-300",
-  string:    "text-amber-300/90",
+  string:    "text-amber-300",
   punct:     "text-zinc-500",
-  comment:   "text-zinc-500 italic",
-  "jsx-expr": "text-violet-300/90",
+  comment:   "text-zinc-600 italic",
+  "jsx-expr": "text-violet-300",
   text:      "text-zinc-300",
   whitespace: "",
 };
@@ -146,24 +147,13 @@ export function CodeOutput({ htmlCode, standaloneCode, jsxCode }: CodeOutputProp
   return (
     <section
       aria-label="Generated code"
-      className="flex flex-col overflow-hidden rounded-2xl border border-rim bg-canvas"
+      className="flex flex-col overflow-hidden rounded-2xl border border-rim bg-[#0a0a0b]"
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-rim px-4 py-3">
+      <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
         <div className="flex items-center gap-2">
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="text-muted"
-            aria-hidden="true"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
-          </svg>
-          <span className="text-xs font-semibold text-muted">
+          <Code2 size={16} className="text-zinc-500" aria-hidden="true" />
+          <span className="text-[13px] font-semibold text-zinc-100">
             Export
           </span>
         </div>
@@ -178,21 +168,19 @@ export function CodeOutput({ htmlCode, standaloneCode, jsxCode }: CodeOutputProp
           size="sm"
           onClick={handleCopy}
           aria-label={`Copy ${activeTabInfo.label} code`}
-          className={copied ? "border-accent/30 bg-accent/10 text-accent-hi hover:bg-accent/15" : ""}
+          className={copied
+            ? "border-zinc-500/40 bg-white/10 text-zinc-200 hover:bg-white/15"
+            : "border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
+          }
         >
           {copied ? (
             <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-              </svg>
+              <Check size={14} aria-hidden="true" />
               Copied!
             </>
           ) : (
             <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-              </svg>
+              <Copy size={14} aria-hidden="true" />
               Copy
             </>
           )}
@@ -201,7 +189,7 @@ export function CodeOutput({ htmlCode, standaloneCode, jsxCode }: CodeOutputProp
 
       {/* Tabs */}
       <div
-        className="flex border-b border-rim"
+        className="flex border-b border-zinc-800"
         role="tablist"
         aria-label="Export format"
       >
@@ -216,10 +204,10 @@ export function CodeOutput({ htmlCode, standaloneCode, jsxCode }: CodeOutputProp
             title={tab.description}
             size="sm"
             className={[
-              "rounded-none px-3 py-2 text-[11px] font-medium hover:bg-transparent",
+              "rounded-none px-3 py-2.5 text-xs font-medium",
               activeTab === tab.id
-                ? "border-b-2 border-accent text-cream data-[state=on]:bg-transparent"
-                : "text-muted hover:text-cream data-[state=on]:bg-transparent",
+                ? "border-b-2 border-zinc-400 text-zinc-100 bg-white/5 data-[state=on]:bg-white/5"
+                : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60 data-[state=on]:bg-transparent",
             ].join(" ")}
           >
             {tab.label}
@@ -230,7 +218,7 @@ export function CodeOutput({ htmlCode, standaloneCode, jsxCode }: CodeOutputProp
       {/* Code block */}
       <div className="overflow-x-auto" id="code-panel" role="tabpanel">
         <pre
-          className="p-4 font-mono text-[13px] leading-relaxed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-rim-hi"
+          className="p-4 font-mono text-[13px] leading-relaxed text-zinc-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-zinc-600"
           tabIndex={0}
           aria-label={`${activeTabInfo.label} code output`}
         >

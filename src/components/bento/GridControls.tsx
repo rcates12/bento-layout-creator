@@ -56,7 +56,7 @@ function NumberInput({
     <div className="flex flex-col gap-1.5">
       <Label
         htmlFor={id}
-        className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-accent/80 dark:text-muted"
+        className="flex items-center gap-1.5 text-xs font-medium text-muted"
       >
         <span className="text-muted/70" aria-hidden="true">{icon}</span>
         {label}
@@ -73,8 +73,8 @@ function NumberInput({
             disabled={value <= min}
           >
             <svg
-              width="10"
-              height="10"
+              width="12"
+              height="12"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -113,8 +113,8 @@ function NumberInput({
             disabled={value >= max}
           >
             <svg
-              width="10"
-              height="10"
+              width="12"
+              height="12"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -141,15 +141,15 @@ export function GridControls({
   onRowHoverDelta,
 }: GridControlsProps) {
   return (
-    <section aria-label="Grid settings" className="flex flex-col gap-4">
-      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+    <section aria-label="Grid settings" className="flex flex-col gap-3">
+      <h2 className="text-[13px] font-semibold text-cream">
         Grid
       </h2>
 
       <NumberInput
         id="grid-cols"
         label="Columns"
-        icon={<Columns2 size={12} />}
+        icon={<Columns2 size={15} />}
         value={grid.cols}
         min={1}
         max={12}
@@ -163,7 +163,7 @@ export function GridControls({
       <NumberInput
         id="grid-rows"
         label="Rows"
-        icon={<Rows2 size={12} />}
+        icon={<Rows2 size={15} />}
         value={grid.rows}
         min={1}
         max={12}
@@ -177,10 +177,10 @@ export function GridControls({
       <div className="flex flex-col gap-1.5">
         <Label
           htmlFor="grid-gap"
-          className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-accent/80 dark:text-muted"
+          className="flex items-center gap-1.5 text-xs font-medium text-muted"
         >
-          <span className="text-muted/70" aria-hidden="true">
-            <Expand size={12} />
+          <span className="text-muted/60" aria-hidden="true">
+            <Expand size={15} />
           </span>
           Gap
         </Label>
