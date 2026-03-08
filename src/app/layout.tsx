@@ -1,22 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { IBM_Plex_Mono, Noto_Serif_Display } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const ibmPlexMono = IBM_Plex_Mono({
+  variable: "--font-ibm-plex-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const notoSerifDisplay = Noto_Serif_Display({
+  variable: "--font-noto-serif",
   subsets: ["latin"],
+  weight: ["400"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Bento Creator",
+  title: "Lintel",
   description:
     "Visual bento layout builder — craft grid layouts and export clean Tailwind CSS markup.",
 };
@@ -27,17 +28,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
-      {/* Prevent flash of wrong theme — runs before React hydrates */}
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('bento-theme');if(t==='dark'||(t===null&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})()`,
-          }}
-        />
-      </head>
+    <html lang="en" className={`${ibmPlexMono.variable} ${notoSerifDisplay.variable} dark`}>
       <body className="h-full overflow-hidden">
-        <TooltipProvider delay={400}>{children}</TooltipProvider>
+        {children}
       </body>
     </html>
   );

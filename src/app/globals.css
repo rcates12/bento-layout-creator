@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -10,10 +9,11 @@
   /* Light-mode defaults — Tailwind generates CSS vars that .dark can override */
   --color-canvas:     #f5f6f8;
   --color-surface:    #ffffff;
-  --color-surface-hi: #f1f4f9;
-  --color-hover:      #e8edf5;
-  --color-rim:        #e2e8f0;
-  --color-rim-hi:     #c8d3e0;
+  --color-surface-hi: #f0f2f7;
+  --color-hover:      #e4e9f2;
+  --color-active:     #dbeafe;
+  --color-rim:        #c8d3e0;
+  --color-rim-hi:     #b0bec9;
   --color-cream:      #0f172a;
   --color-muted:      #64748b;
   --color-ghost:      #e2e8f0;
@@ -21,8 +21,9 @@
   --color-accent-hi:  #5b21b6;
   --color-danger:     #dc2626;
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-ibm-plex-mono);
+  --font-mono: var(--font-ibm-plex-mono);
+  --font-serif: var(--font-noto-serif);
 }
 
 /* ─── Dark mode overrides ────────────────────────────────────────────────── */
@@ -30,47 +31,49 @@
 .dark {
   color-scheme: dark;
 
-  /* Project design tokens */
-  --color-canvas:     #09090b;
-  --color-surface:    #111113;
-  --color-surface-hi: #18181b;
-  --color-hover:      #27272a;
-  --color-rim:        #27272a;
-  --color-rim-hi:     #3f3f46;
-  --color-cream:      #fafafa;
-  --color-muted:      #a1a1aa;
-  --color-ghost:      #27272a;
-  --color-accent:     #8b5cf6;
-  --color-accent-hi:  #a78bfa;
+  /* Project design tokens — monochrome palette
+     Palette: #000000 · #111111 · #232323 · #343434 · #464646 · #575757 · #696969 · #7a7a7a */
+  --color-canvas:     #000000;
+  --color-surface:    #111111;
+  --color-surface-hi: #1c1c1c;
+  --color-hover:      #2d2d2d;
+  --color-active:     #343434;
+  --color-rim:        #232323;
+  --color-rim-hi:     #464646;
+  --color-cream:      #f0f0f0;
+  --color-muted:      #696969;
+  --color-ghost:      #232323;
+  --color-accent:     #e0e0e0;
+  --color-accent-hi:  #ffffff;
   --color-danger:     #f87171;
 
-  /* shadcn/ui tokens — mapped to project palette */
-  --background:          #09090b;
-  --foreground:          #fafafa;
-  --card:                #111113;
-  --card-foreground:     #fafafa;
-  --popover:             #18181b;
-  --popover-foreground:  #fafafa;
-  --primary:             #8b5cf6;
-  --primary-foreground:  #fafafa;
-  --secondary:           #18181b;
-  --secondary-foreground:#fafafa;
-  --muted:               #18181b;
-  --muted-foreground:    #a1a1aa;
-  --accent:              #27272a;
-  --accent-foreground:   #fafafa;
+  /* shadcn/ui tokens — mapped to monochrome palette */
+  --background:          #000000;
+  --foreground:          #f0f0f0;
+  --card:                #111111;
+  --card-foreground:     #f0f0f0;
+  --popover:             #1c1c1c;
+  --popover-foreground:  #f0f0f0;
+  --primary:             #7a7a7a;
+  --primary-foreground:  #f0f0f0;
+  --secondary:           #1c1c1c;
+  --secondary-foreground:#f0f0f0;
+  --muted:               #1c1c1c;
+  --muted-foreground:    #696969;
+  --accent:              #2d2d2d;
+  --accent-foreground:   #f0f0f0;
   --destructive:         #f87171;
-  --border:              #27272a;
-  --input:               #48484e;
-  --ring:                #8b5cf6;
-  --sidebar:             #111113;
-  --sidebar-foreground:  #fafafa;
-  --sidebar-primary:     #8b5cf6;
-  --sidebar-primary-foreground: #fafafa;
-  --sidebar-accent:      #27272a;
-  --sidebar-accent-foreground:  #fafafa;
-  --sidebar-border:      #27272a;
-  --sidebar-ring:        #8b5cf6;
+  --border:              #232323;
+  --input:               #464646;
+  --ring:                #7a7a7a;
+  --sidebar:             #111111;
+  --sidebar-foreground:  #f0f0f0;
+  --sidebar-primary:     #7a7a7a;
+  --sidebar-primary-foreground: #f0f0f0;
+  --sidebar-accent:      #2d2d2d;
+  --sidebar-accent-foreground:  #f0f0f0;
+  --sidebar-border:      #232323;
+  --sidebar-ring:        #7a7a7a;
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────── */
@@ -94,8 +97,8 @@
   --accent:              #e8edf5;
   --accent-foreground:   #0f172a;
   --destructive:         #dc2626;
-  --border:              #c4cfe0;
-  --input:               #c4cfe0;
+  --border:              #b0bec9;
+  --input:               #b0bec9;
   --ring:                #7c3aed;
   --radius:              0.5rem;
   --sidebar:             #ffffff;
@@ -196,42 +199,17 @@ body {
   background: var(--color-muted);
 }
 
-/* ─── Isomorphic 3D sidebar ──────────────────────────────────────────────── */
+/* ─── Sidebar ────────────────────────────────────────────────────────────── */
 
 .iso-sidebar {
-  background: linear-gradient(
-    160deg,
-    #f5f3ff 0%,
-    #eef2ff 35%,
-    #fdf4ff 65%,
-    #fff1f8 100%
-  );
-}
-
-.dark .iso-sidebar {
   background: var(--color-surface);
 }
 
-/* Floating section cards — glassy in light, elevated in dark */
+/* Flat elevated section card */
 .iso-card {
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  border-radius: 12px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    0 4px 20px rgba(108, 80, 240, 0.07),
-    0 1px 4px rgba(0, 0, 0, 0.05);
-}
-
-.dark .iso-card {
   background: var(--color-surface-hi);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   border: 1px solid var(--color-rim);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
 /* ─── Reduced motion ─────────────────────────────────────────────────────── */
@@ -283,6 +261,65 @@ body {
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ─── react-colorful ─────────────────────────────────────────────────────── */
+
+.react-colorful {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 160px;
+  user-select: none;
+  cursor: crosshair;
+  gap: 8px;
+}
+
+.react-colorful__saturation {
+  flex: 1;
+  border-radius: 6px;
+  background-image: linear-gradient(to top, #000, rgba(0,0,0,0)),
+                    linear-gradient(to right, #fff, rgba(255,255,255,0));
+}
+
+.react-colorful__hue,
+.react-colorful__alpha {
+  height: 10px;
+  border-radius: 5px;
+}
+
+.react-colorful__hue {
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+
+.react-colorful__last-control {
+  border-radius: 5px;
+}
+
+.react-colorful__interactive {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  outline: none;
+  touch-action: none;
+}
+
+.react-colorful__pointer {
+  position: absolute;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  background-color: #fff;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+}
+
+.react-colorful__pointer:focus {
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.5);
 }
 
 @layer base {

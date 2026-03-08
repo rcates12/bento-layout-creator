@@ -22,15 +22,15 @@ export const EARTH_TONES: CellColor[] = [
   { name: "Mint",      hex: "#f0fdf4" },   // green-50
 ];
 
-export const DEFAULT_CELL_BG = "#1e1b4b";
+export const DEFAULT_CELL_BG = "#000000";
 
 // Neutral placeholder that works on both light and dark canvas
 export const PLACEHOLDER_IMAGE = "https://placehold.co/800x600/18181b/a1a1aa?text=+";
 
 export const INITIAL_CELL_COLORS: Record<string, string> = {
-  "cell-a": "#1e1b4b",  // indigo-950
-  "cell-b": "#2e1065",  // violet-950
-  "cell-c": "#0369a1",  // sky-700
-  "cell-d": "#3730a3",  // indigo-700
-  "cell-e": "#0f172a",  // slate-950
+  "cell-a": "#000000",
+  "cell-b": "#000000",
+  "cell-c": "#000000",
+  "cell-d": "#000000",
+  "cell-e": "#000000",
 };

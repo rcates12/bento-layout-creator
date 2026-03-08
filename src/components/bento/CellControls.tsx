@@ -1,5 +1,7 @@
 "use client";
 
+"use client";
+
 import { useState } from "react";
 import {
   DndContext,
@@ -23,14 +25,18 @@ import {
   Image as ImageIcon,
   MousePointerClick,
   ChevronDown,
-  ChevronUp,
   Trash2,
   ImageOff,
   GripVertical,
   AlignLeft,
   AlignCenter,
   AlignRight,
+  Paintbrush,
+  LayoutGrid,
+  Layers,
 } from "lucide-react";
+import { HexColorPicker } from "react-colorful";
+import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
 import type {
   BentoCell,
   GridConfig,
@@ -62,7 +68,7 @@ import { ToggleGroup as ShadToggleGroup, ToggleGroupItem } from "@/components/ui
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <Label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-accent/80 dark:text-muted/80 gap-0">
+    <Label className="text-xs font-semibold text-muted gap-0">
       {children}
     </Label>
   );
@@ -72,10 +78,46 @@ function Divider() {
   return <Separator className="bg-rim-hi/60 dark:bg-rim-hi/30" />;
 }
 
+function CollapsibleSection({
+  icon: Icon,
+  title,
+  defaultOpen = true,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-lg border border-rim bg-surface-hi/40 dark:bg-canvas/30 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors hover:bg-accent/8"
+      >
+        <Icon size={14} className="shrink-0 text-zinc-500" aria-hidden="true" />
+        <span className="flex-1 text-xs font-semibold text-cream">{title}</span>
+        <ChevronDown
+          size={12}
+          aria-hidden="true"
+          className={`shrink-0 text-muted transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className="border-t border-rim/60 px-3 py-3 flex flex-col gap-3">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ControlRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="shrink-0 text-[11px] text-muted">{label}</span>
+      <span className="shrink-0 text-xs text-muted">{label}</span>
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
@@ -92,12 +134,12 @@ function MiniSelect({
 }) {
   return (
     <Select value={value} onValueChange={(v) => v && onChange(v)}>
-      <SelectTrigger size="sm" className="h-7 w-full text-[11px]">
+      <SelectTrigger size="sm" className="h-7 w-full text-xs">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
         {options.map((o) => (
-          <SelectItem key={o.value} value={o.value} className="text-[11px]">
+          <SelectItem key={o.value} value={o.value} className="text-xs">
             {o.label}
           </SelectItem>
         ))}
@@ -141,7 +183,8 @@ function MiniInput({
   );
 }
 
-function ToggleGroup({
+// Unified pill-style toggle — used for Fit, Style, Alignment and other single-select options
+function PillToggle({
   value,
   options,
   onChange,
@@ -151,25 +194,30 @@ function ToggleGroup({
   onChange: (v: string) => void;
 }) {
   return (
-    <ShadToggleGroup
-      value={[value]}
-      onValueChange={(vals) => { const v = vals[0]; if (v) onChange(v); }}
-      variant="outline"
-      spacing={0}
-      className="w-full"
-    >
-      {options.map((o) => (
-        <Tooltip key={o.value} content={o.title ?? o.label} side="bottom">
-          <ToggleGroupItem
-            value={o.value}
-            aria-label={o.title ?? o.label}
-            className="flex-1 text-[10px] font-medium data-[state=on]:bg-accent/20 data-[state=on]:text-accent-hi"
-          >
-            {o.icon ?? o.label}
-          </ToggleGroupItem>
-        </Tooltip>
-      ))}
-    </ShadToggleGroup>
+    <div className="flex w-full overflow-hidden rounded-lg border border-rim/70 bg-surface-hi">
+      {options.map((o, i) => {
+        const isOn = value === o.value;
+        return (
+          <Tooltip key={o.value} content={o.title ?? o.label} side="bottom" className="flex-1 min-w-0">
+            <button
+              type="button"
+              onClick={() => onChange(o.value)}
+              aria-pressed={isOn}
+              aria-label={o.title ?? o.label}
+              className={[
+                "flex w-full items-center justify-center gap-1 py-1.5 text-[11px] font-medium transition-colors focus:outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-accent/50",
+                i > 0 ? "border-l border-rim/70" : "",
+                isOn
+                  ? "bg-accent/20 text-accent-hi"
+                  : "text-muted hover:bg-accent/10 hover:text-cream/90",
+              ].join(" ")}
+            >
+              {o.icon ?? o.label}
+            </button>
+          </Tooltip>
+        );
+      })}
+    </div>
   );
 }
 
@@ -204,7 +252,7 @@ function SpinField({
 
   return (
     <div className="flex items-center justify-between gap-2">
-      <label htmlFor={id} className="min-w-0 shrink-0 text-xs text-muted">
+      <label htmlFor={id} className="min-w-0 shrink-0 text-xs font-medium text-muted">
         {label}
       </label>
       <div className="flex items-center gap-1">
@@ -215,7 +263,7 @@ function SpinField({
           onClick={() => !decreaseDisabled && onChange(stepped(value, -step))}
           disabled={decreaseDisabled}
         >
-          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
           </svg>
         </Button>
@@ -240,7 +288,7 @@ function SpinField({
           onClick={() => !increaseDisabled && onChange(stepped(value, step))}
           disabled={increaseDisabled}
         >
-          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
         </Button>
@@ -274,7 +322,7 @@ function RadiusPicker({ value, onChange }: { value: BorderRadius; onChange: (v: 
           <ToggleGroupItem
             value={opt.value}
             aria-label={`Set border radius to ${opt.label}`}
-            className="h-7 w-7 shrink-0 border border-rim bg-surface-hi text-muted hover:border-rim-hi hover:text-cream data-[state=on]:border-accent data-[state=on]:bg-accent/20 data-[state=on]:text-accent-hi"
+            className="h-7 w-7 shrink-0 border border-rim bg-surface-hi text-muted hover:bg-hover/60 hover:border-rim-hi hover:text-cream/90 data-[state=on]:border-accent/40 data-[state=on]:bg-accent/15 data-[state=on]:text-accent-hi"
             style={{ borderRadius: opt.css }}
           >
             <div
@@ -289,39 +337,140 @@ function RadiusPicker({ value, onChange }: { value: BorderRadius; onChange: (v: 
   );
 }
 
-// ─── Color swatches ───────────────────────────────────────────────────────────
+// ─── Color picker ─────────────────────────────────────────────────────────────
 
-function ColorSwatches({
+const QUICK_COLORS: { name: string; hex: string }[] = [
+  { name: "White", hex: "#ffffff" },
+  { name: "Ink", hex: "#18181b" },
+  { name: "Indigo", hex: "#1e1b4b" },
+  { name: "Violet", hex: "#6d28d9" },
+  { name: "Sky", hex: "#0369a1" },
+  { name: "Mint", hex: "#f0fdf4" },
+  { name: "Pearl", hex: "#f8fafc" },
+  { name: "Lavender", hex: "#ede9fe" },
+];
+
+function ColorPicker({
   value,
   onChange,
-  includeWhite,
 }: {
   value: string;
   onChange: (hex: string) => void;
-  includeWhite?: boolean;
 }) {
-  const palette = [
-    ...(includeWhite ? [{ name: "White", hex: "#ffffff" }] : []),
-    ...EARTH_TONES,
-  ];
+  const isPreset = QUICK_COLORS.some((c) => c.hex.toLowerCase() === value.toLowerCase()) ||
+    EARTH_TONES.some((c) => c.hex.toLowerCase() === value.toLowerCase());
+
   return (
-    <ShadToggleGroup
-      value={[value]}
-      onValueChange={(vals) => { const v = vals[0]; if (v) onChange(v); }}
-      className="flex flex-wrap gap-1 w-full"
-      spacing={4}
-    >
-      {palette.map(({ name, hex }) => (
-        <Tooltip key={hex} content={name} side="bottom">
-          <ToggleGroupItem
-            value={hex}
-            aria-label={`Set to ${name}`}
-            style={{ backgroundColor: hex }}
-            className="h-5 w-5 min-w-0 rounded border-2 border-transparent p-0 transition-[border-color,transform] duration-150 hover:scale-110 active:scale-95 hover:border-white/20 data-[state=on]:border-accent-hi data-[state=on]:ring-1 data-[state=on]:ring-accent/60"
-          />
-        </Tooltip>
-      ))}
-    </ShadToggleGroup>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {QUICK_COLORS.map(({ name, hex }) => {
+          const active = hex.toLowerCase() === value.toLowerCase();
+          return (
+            <Tooltip key={hex} content={name} side="bottom">
+              <button
+                type="button"
+                onClick={() => onChange(hex)}
+                aria-label={`Set to ${name}`}
+                aria-pressed={active}
+                style={{ backgroundColor: hex }}
+                className={[
+                  "relative h-6 w-6 rounded-md border-2 transition-[border-color,transform] duration-150",
+                  "hover:scale-110 active:scale-95",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+                  active
+                    ? "border-accent-hi ring-1 ring-accent/60"
+                    : "border-rim hover:border-white/30",
+                ].join(" ")}
+              >
+                {active && (
+                  <svg
+                    className="absolute inset-0 m-auto"
+                    width="10" height="10" viewBox="0 0 24 24"
+                    fill="none" stroke={hex === "#ffffff" || hex === "#f8fafc" || hex === "#f0fdf4" || hex === "#ede9fe" ? "#7c3aed" : "#ffffff"}
+                    strokeWidth="3" aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                )}
+              </button>
+            </Tooltip>
+          );
+        })}
+
+        {/* Custom color picker via react-colorful popover */}
+        <Popover className="relative">
+          <Tooltip content="Custom color" side="bottom">
+            <PopoverButton
+              as="button"
+              type="button"
+              style={{ backgroundColor: !isPreset ? value : undefined }}
+              aria-label="Pick a custom color"
+              className={[
+                "relative flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border-2 transition-[border-color,transform] duration-150",
+                "hover:scale-110 active:scale-95 focus:outline-none",
+                !isPreset
+                  ? "border-accent-hi ring-1 ring-accent/60"
+                  : "border-rim hover:border-rim-hi bg-surface-hi",
+              ].join(" ")}
+            >
+              {isPreset ? (
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              ) : (
+                <svg className="absolute inset-0 m-auto" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              )}
+            </PopoverButton>
+          </Tooltip>
+          <PopoverPanel
+            anchor={{ to: "bottom start", gap: 8 }}
+            className="z-[9999] w-52 rounded-xl border border-rim bg-surface-hi p-3 shadow-2xl shadow-black/60"
+          >
+            <HexColorPicker color={value} onChange={onChange} />
+            <div className="mt-2 flex items-center gap-2">
+              <div
+                className="h-5 w-5 shrink-0 rounded border border-rim"
+                style={{ backgroundColor: value }}
+                aria-hidden="true"
+              />
+              <Input
+                type="text"
+                value={value}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v);
+                }}
+                spellCheck={false}
+                autoComplete="off"
+                className="h-6 flex-1 font-mono text-[11px] text-muted"
+              />
+            </div>
+          </PopoverPanel>
+        </Popover>
+      </div>
+
+      {/* Hex display */}
+      <div className="flex items-center gap-2">
+        <div
+          className="h-5 w-5 shrink-0 rounded border border-rim"
+          style={{ backgroundColor: value }}
+          aria-hidden="true"
+        />
+        <Input
+          type="text"
+          value={value}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v);
+          }}
+          spellCheck={false}
+          autoComplete="off"
+          className="h-6 flex-1 font-mono text-[11px] text-muted"
+        />
+      </div>
+    </div>
   );
 }
 
@@ -352,9 +501,9 @@ const LEADING_OPTIONS: { value: LineHeight; label: string }[] = [
 ];
 
 const ALIGN_OPTIONS: { value: TextAlign; label: string; title: string; icon: React.ReactNode }[] = [
-  { value: "left",   label: "Left",   title: "Align left",   icon: <AlignLeft   size={13} aria-hidden="true" /> },
-  { value: "center", label: "Center", title: "Align center", icon: <AlignCenter size={13} aria-hidden="true" /> },
-  { value: "right",  label: "Right",  title: "Align right",  icon: <AlignRight  size={13} aria-hidden="true" /> },
+  { value: "left",   label: "Left",   title: "Align left",   icon: <AlignLeft   size={14} aria-hidden="true" /> },
+  { value: "center", label: "Center", title: "Align center", icon: <AlignCenter size={14} aria-hidden="true" /> },
+  { value: "right",  label: "Right",  title: "Align right",  icon: <AlignRight  size={14} aria-hidden="true" /> },
 ];
 
 function TextBlockEditor({
@@ -376,7 +525,7 @@ function TextBlockEditor({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+      <div className="flex flex-col gap-2">
         <ControlRow label="Size">
           <MiniSelect
             value={block.fontSize ?? "sm"}
@@ -409,7 +558,7 @@ function TextBlockEditor({
 
       <div className="flex flex-col gap-1">
         <SectionLabel>Alignment</SectionLabel>
-        <ToggleGroup
+        <PillToggle
           value={block.align ?? "left"}
           options={ALIGN_OPTIONS}
           onChange={(v) => onUpdate({ align: v as TextAlign })}
@@ -418,22 +567,21 @@ function TextBlockEditor({
 
       <div className="flex flex-col gap-1.5">
         <SectionLabel>Color</SectionLabel>
-        <ColorSwatches
+        <ColorPicker
           value={block.color ?? "#ffffff"}
           onChange={(v) => onUpdate({ color: v })}
-          includeWhite
         />
       </div>
     </div>
   );
 }
 
-const SHADOW_LEVELS: { value: ShadowLevel; title: string; css: string }[] = [
-  { value: "none", title: "No shadow",         css: "none" },
-  { value: "sm",   title: "Small shadow",      css: "0 1px 4px rgba(0,0,0,0.55)" },
-  { value: "md",   title: "Medium shadow",     css: "0 4px 10px rgba(0,0,0,0.55)" },
-  { value: "lg",   title: "Large shadow",      css: "0 8px 20px rgba(0,0,0,0.6)" },
-  { value: "xl",   title: "Extra-large shadow",css: "0 16px 36px rgba(0,0,0,0.65)" },
+const SHADOW_OPTIONS: { value: ShadowLevel; label: string; title: string }[] = [
+  { value: "none", label: "None", title: "No shadow" },
+  { value: "sm",   label: "SM",   title: "Small shadow" },
+  { value: "md",   label: "MD",   title: "Medium shadow" },
+  { value: "lg",   label: "LG",   title: "Large shadow" },
+  { value: "xl",   label: "XL",   title: "Extra-large shadow" },
 ];
 
 function ShadowPicker({
@@ -444,35 +592,19 @@ function ShadowPicker({
   onChange: (v: ShadowLevel) => void;
 }) {
   return (
-    <ShadToggleGroup
-      value={[value]}
-      onValueChange={(vals) => { const v = vals[0]; if (v) onChange(v as ShadowLevel); }}
-      spacing={4}
-      className="w-full"
-    >
-      {SHADOW_LEVELS.map((s) => (
-        <Tooltip key={s.value} content={s.title} side="bottom">
-          <ToggleGroupItem
-            value={s.value}
-            aria-label={s.title}
-            className="flex flex-1 h-10 border border-rim bg-surface-hi hover:border-muted/50 data-[state=on]:border-accent/70 data-[state=on]:bg-accent/10"
-          >
-            <div
-              className="w-5 h-5 rounded-sm bg-cream/80"
-              style={{ boxShadow: s.css }}
-            />
-          </ToggleGroupItem>
-        </Tooltip>
-      ))}
-    </ShadToggleGroup>
+    <PillToggle
+      value={value}
+      options={SHADOW_OPTIONS}
+      onChange={(v) => onChange(v as ShadowLevel)}
+    />
   );
 }
 
-const BORDER_WIDTH_LEVELS: { value: string; px: number; title: string }[] = [
-  { value: "0", px: 0, title: "No border" },
-  { value: "1", px: 1, title: "1px border" },
-  { value: "2", px: 2, title: "2px border" },
-  { value: "4", px: 4, title: "4px border" },
+const BORDER_WIDTH_OPTIONS: { value: string; label: string; title: string }[] = [
+  { value: "0", label: "None", title: "No border" },
+  { value: "1", label: "1px",  title: "1px border" },
+  { value: "2", label: "2px",  title: "2px border" },
+  { value: "4", label: "4px",  title: "4px border" },
 ];
 
 function BorderWidthPicker({
@@ -483,31 +615,11 @@ function BorderWidthPicker({
   onChange: (v: string) => void;
 }) {
   return (
-    <ShadToggleGroup
-      value={[value]}
-      onValueChange={(vals) => { const v = vals[0]; if (v) onChange(v); }}
-      spacing={4}
-      className="w-full"
-    >
-      {BORDER_WIDTH_LEVELS.map((b) => (
-        <Tooltip key={b.value} content={b.title} side="bottom">
-          <ToggleGroupItem
-            value={b.value}
-            aria-label={b.title}
-            className="flex flex-1 h-10 border border-rim bg-surface-hi hover:border-muted/50 data-[state=on]:border-accent/70 data-[state=on]:bg-accent/10"
-          >
-            {b.px === 0 ? (
-              <span className="text-[9px] font-semibold text-muted">—</span>
-            ) : (
-              <div
-                className="w-5 h-5 rounded-sm border-cream/60"
-                style={{ borderWidth: `${b.px}px`, borderStyle: "solid" }}
-              />
-            )}
-          </ToggleGroupItem>
-        </Tooltip>
-      ))}
-    </ShadToggleGroup>
+    <PillToggle
+      value={value}
+      options={BORDER_WIDTH_OPTIONS}
+      onChange={onChange}
+    />
   );
 }
 
@@ -525,7 +637,7 @@ function ImageBlockEditor({
       {/* Fit */}
       <div className="flex flex-col gap-1">
         <SectionLabel>Fit</SectionLabel>
-        <ToggleGroup
+        <PillToggle
           value={block.fit ?? "cover"}
           options={[
             { value: "cover", label: "Cover", title: "Cover — fill the area" },
@@ -563,10 +675,9 @@ function ImageBlockEditor({
         {hasBorder && (
           <div className="flex flex-col gap-1 pt-1">
             <SectionLabel>Border Color</SectionLabel>
-            <ColorSwatches
+            <ColorPicker
               value={block.borderColor ?? "#ffffff"}
               onChange={(v) => onUpdate({ borderColor: v })}
-              includeWhite
             />
           </div>
         )}
@@ -615,7 +726,7 @@ function ButtonBlockEditor({
 
       <div className="flex flex-col gap-1">
         <SectionLabel>Style</SectionLabel>
-        <ToggleGroup
+        <PillToggle
           value={block.variant ?? "solid"}
           options={BTN_VARIANT_OPTIONS}
           onChange={(v) => onUpdate({ variant: v as ButtonBlock["variant"] })}
@@ -644,20 +755,18 @@ function ButtonBlockEditor({
         <SectionLabel>
           {block.variant === "solid" ? "Background" : "Accent color"}
         </SectionLabel>
-        <ColorSwatches
+        <ColorPicker
           value={block.bgColor ?? "#ffffff"}
           onChange={(v) => onUpdate({ bgColor: v })}
-          includeWhite
         />
       </div>
 
       {block.variant === "solid" && (
         <div className="flex flex-col gap-1.5">
           <SectionLabel>Text color</SectionLabel>
-          <ColorSwatches
+          <ColorPicker
             value={block.textColor ?? "#000000"}
             onChange={(v) => onUpdate({ textColor: v })}
-            includeWhite
           />
         </div>
       )}
@@ -669,7 +778,7 @@ function ButtonBlockEditor({
           onChange={(e) => onUpdate({ fullWidth: e.target.checked })}
           className="h-3.5 w-3.5 rounded border-rim accent-accent"
         />
-        <span className="text-[11px] text-muted">Full width</span>
+        <span className="text-xs text-muted">Full width</span>
       </label>
     </div>
   );
@@ -691,20 +800,16 @@ interface BlockCardProps {
   isDragging?: boolean;
   onUpdate: (updates: Partial<ContentBlock>) => void;
   onRemove: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
 }
 
 function BlockCard({
   block,
-  isFirst,
-  isLast,
+  isFirst: _isFirst,
+  isLast: _isLast,
   dragHandleProps,
   isDragging,
   onUpdate,
   onRemove,
-  onMoveUp,
-  onMoveDown,
 }: BlockCardProps) {
   const [open, setOpen] = useState(true);
   const meta = BLOCK_TYPE_META[block.type];
@@ -718,71 +823,45 @@ function BlockCard({
       ].join(" ")}
     >
       {/* Header */}
-      <div className="flex items-center bg-surface-hi/60 dark:bg-surface-hi px-2 py-1.5 gap-1 border-b border-rim/40">
-        {/* Drag handle */}
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          aria-label={`Drag to reorder ${meta.label} block`}
-          title="Drag to reorder"
-          className="cursor-grab text-muted/40 hover:bg-transparent hover:text-muted active:cursor-grabbing"
-          {...dragHandleProps}
-        >
-          <GripVertical size={13} aria-hidden="true" />
-        </Button>
+      <div className="flex items-center bg-surface-hi border-b border-rim/40 min-h-[34px]">
+        {/* Drag handle with tooltip */}
+        <Tooltip content="Move" side="top">
+          <button
+            type="button"
+            aria-label={`Drag to reorder ${meta.label} block`}
+            className="flex h-full items-center px-2 cursor-grab text-muted/50 hover:text-muted transition-colors active:cursor-grabbing"
+            {...dragHandleProps}
+          >
+            <GripVertical size={14} aria-hidden="true" />
+          </button>
+        </Tooltip>
 
-        {/* Title */}
-        <Button
-          variant="ghost"
+        {/* Title — full-height click target for expand/collapse */}
+        <button
+          type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex flex-1 min-w-0 h-auto py-0 justify-start gap-1.5 text-left hover:bg-transparent"
+          className="flex flex-1 min-w-0 self-stretch items-center gap-2 px-1.5 py-2 text-left transition-colors hover:bg-accent/8"
+          aria-expanded={open}
         >
-          <Icon size={12} className={`shrink-0 ${meta.color}`} aria-hidden="true" />
-          <span className="text-[11px] font-medium text-cream">{meta.label}</span>
+          <Icon size={13} className={`shrink-0 ${meta.color}`} aria-hidden="true" />
+          <span className="text-xs font-medium text-cream leading-none">{meta.label}</span>
           <ChevronDown
-            size={10}
+            size={12}
             aria-hidden="true"
-            className={`ml-auto shrink-0 text-muted transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+            className={`ml-auto mr-0.5 shrink-0 text-muted transition-transform duration-150 ${open ? "rotate-180" : ""}`}
           />
-        </Button>
-
-        {/* Reorder buttons */}
-        <Tooltip content="Move up" side="top">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={onMoveUp}
-            disabled={isFirst}
-            aria-label="Move block up"
-            className="text-muted/60 hover:bg-transparent hover:text-sky-400 focus-visible:ring-sky-400"
-          >
-            <ChevronUp size={13} aria-hidden="true" />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Move down" side="top">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={onMoveDown}
-            disabled={isLast}
-            aria-label="Move block down"
-            className="text-muted/60 hover:bg-transparent hover:text-amber-400 focus-visible:ring-amber-400"
-          >
-            <ChevronDown size={13} aria-hidden="true" />
-          </Button>
-        </Tooltip>
+        </button>
 
         {/* Remove */}
         <Tooltip content="Remove block" side="top">
-          <Button
-            variant="ghost"
-            size="icon-xs"
+          <button
+            type="button"
             onClick={onRemove}
             aria-label={`Remove ${meta.label} block`}
-            className="text-muted hover:bg-transparent hover:text-red-400 focus-visible:ring-red-500"
+            className="flex h-full items-center px-2 text-muted/60 hover:text-red-400 transition-colors"
           >
-            <Trash2 size={10} aria-hidden="true" />
-          </Button>
+            <Trash2 size={12} aria-hidden="true" />
+          </button>
         </Tooltip>
       </div>
 
@@ -806,7 +885,7 @@ function BlockCard({
 
 // ─── Sortable block card ───────────────────────────────────────────────────────
 
-function SortableBlockCard(props: Omit<BlockCardProps, "dragHandleProps" | "isDragging">) {
+function SortableBlockCard(props: Omit<BlockCardProps, "dragHandleProps" | "isDragging" | "isFirst" | "isLast"> & { isFirst?: boolean; isLast?: boolean }) {
   const {
     attributes,
     listeners,
@@ -825,6 +904,8 @@ function SortableBlockCard(props: Omit<BlockCardProps, "dragHandleProps" | "isDr
     <div ref={setNodeRef} style={style}>
       <BlockCard
         {...props}
+        isFirst={props.isFirst ?? false}
+        isLast={props.isLast ?? false}
         dragHandleProps={{ ...attributes, ...listeners } as React.HTMLAttributes<HTMLButtonElement>}
         isDragging={isDragging}
       />
@@ -838,22 +919,24 @@ function AddBlockButton({
   icon: Icon,
   label,
   color,
+  tintClass,
   onClick,
 }: {
   icon: React.ElementType;
   label: string;
   color: string;
+  tintClass: string;
   onClick: () => void;
 }) {
   return (
-    <Button
-      variant="outline"
+    <button
+      type="button"
       onClick={onClick}
-      className="flex h-auto flex-col items-center gap-1.5 py-3 text-muted"
+      className={`flex flex-1 items-center justify-center gap-1.5 h-8 rounded-md border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${tintClass}`}
     >
-      <Icon size={16} className={color} aria-hidden="true" />
-      <span className="text-[10px] font-medium">{label}</span>
-    </Button>
+      <Icon size={14} className={color} aria-hidden="true" />
+      {label}
+    </button>
   );
 }
 
@@ -868,7 +951,6 @@ interface CellControlsProps {
   onAddBlock: (block: ContentBlock) => void;
   onUpdateBlock: (blockId: string, updates: Partial<ContentBlock>) => void;
   onRemoveBlock: (blockId: string) => void;
-  onReorderBlock: (blockId: string, direction: "up" | "down") => void;
   onReorderBlocksFull: (blockIds: string[]) => void;
   onSetBgImage: (src: string | null) => void;
   onDuplicateCell: () => void;
@@ -886,7 +968,6 @@ export function CellControls({
   onAddBlock,
   onUpdateBlock,
   onRemoveBlock,
-  onReorderBlock,
   onReorderBlocksFull,
   onSetBgImage,
   onDuplicateCell,
@@ -940,16 +1021,11 @@ export function CellControls({
   }
 
   return (
-    <section aria-label="Cell settings" className="flex flex-col gap-4">
+    <section aria-label="Cell settings" className="flex flex-col gap-3">
 
-      {/* ── Cell title ── */}
-      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-        Cell
-      </h2>
-
-      {/* ── Label ── */}
-      <div className="flex flex-col gap-1.5">
-        <SectionLabel>Label</SectionLabel>
+      {/* ── Cell title + label ── */}
+      <div className="flex flex-col gap-2">
+        <h2 className="text-[13px] font-semibold text-cream">Cell</h2>
         <Input
           id="cell-label"
           type="text"
@@ -960,37 +1036,35 @@ export function CellControls({
         />
       </div>
 
-      <Divider />
-
-      {/* ── Content blocks ── */}
-      <div className="flex flex-col gap-3">
-        <SectionLabel>Content</SectionLabel>
-
-        {/* Add block buttons */}
-        <div className="grid grid-cols-3 gap-1.5">
+      {/* ── Content ── */}
+      <CollapsibleSection icon={Layers} title="Content" defaultOpen>
+        <div className="flex gap-1.5">
           <AddBlockButton
             icon={Type}
             label="Text"
             color="text-blue-400"
+            tintClass="border-blue-500/20 bg-blue-500/5 text-muted hover:bg-blue-500/15 hover:text-cream hover:border-blue-500/30"
             onClick={() => handleAddBlock("text")}
           />
           <AddBlockButton
             icon={ImageIcon}
             label="Image"
             color="text-emerald-400"
+            tintClass="border-emerald-500/20 bg-emerald-500/5 text-muted hover:bg-emerald-500/15 hover:text-cream hover:border-emerald-500/30"
             onClick={() => handleAddBlock("image")}
           />
           <AddBlockButton
             icon={MousePointerClick}
             label="Button"
             color="text-amber-400"
+            tintClass="border-amber-500/20 bg-amber-500/5 text-muted hover:bg-amber-500/15 hover:text-cream hover:border-amber-500/30"
             onClick={() => handleAddBlock("button")}
           />
         </div>
 
         {blocks.length === 0 ? (
-          <p className="rounded-md border border-dashed border-accent/20 dark:border-rim/60 px-3 py-3 text-center text-[11px] text-muted/50 leading-relaxed">
-            No blocks yet — click an icon above
+          <p className="rounded-md border border-dashed border-accent/20 dark:border-rim/60 px-3 py-3 text-center text-xs text-muted/50 leading-relaxed">
+            No blocks yet — add one above
           </p>
         ) : (
           <DndContext
@@ -1003,31 +1077,24 @@ export function CellControls({
               strategy={verticalListSortingStrategy}
             >
               <div className="flex flex-col gap-2">
-                {blocks.map((block, idx) => (
+                {blocks.map((block) => (
                   <SortableBlockCard
                     key={block.id}
                     block={block}
-                    isFirst={idx === 0}
-                    isLast={idx === blocks.length - 1}
                     onUpdate={(updates) => onUpdateBlock(block.id, updates)}
                     onRemove={() => onRemoveBlock(block.id)}
-                    onMoveUp={() => onReorderBlock(block.id, "up")}
-                    onMoveDown={() => onReorderBlock(block.id, "down")}
                   />
                 ))}
               </div>
             </SortableContext>
           </DndContext>
         )}
-      </div>
+      </CollapsibleSection>
 
-      <Divider />
-
-      {/* ── Background ── */}
-      <div className="flex flex-col gap-3">
-        <SectionLabel>Background</SectionLabel>
-
+      {/* ── Appearance ── */}
+      <CollapsibleSection icon={Paintbrush} title="Appearance" defaultOpen>
         {/* Background image */}
+        <SectionLabel>Background</SectionLabel>
         {cell.bgImage ? (
           <div className="flex items-center gap-2 rounded-md border border-rim bg-surface-hi/40 p-2">
             <div
@@ -1035,7 +1102,7 @@ export function CellControls({
               style={{ backgroundImage: `url(${cell.bgImage})` }}
               aria-hidden="true"
             />
-            <span className="flex-1 truncate text-[11px] text-muted/70">Placeholder image</span>
+            <span className="flex-1 truncate text-xs text-muted/70">Placeholder image</span>
             <Tooltip content="Remove background image" side="left">
               <Button
                 variant="outline"
@@ -1044,7 +1111,7 @@ export function CellControls({
                 aria-label="Remove background image"
                 className="hover:border-red-500/40 hover:text-red-400 focus-visible:ring-red-500"
               >
-                <ImageOff size={12} aria-hidden="true" />
+                <ImageOff size={14} aria-hidden="true" />
               </Button>
             </Tooltip>
           </div>
@@ -1052,117 +1119,89 @@ export function CellControls({
           <Button
             variant="outline"
             onClick={() => onSetBgImage(PLACEHOLDER_IMAGE)}
-            className="h-9 w-full gap-2 border-dashed text-[11px] text-muted"
+            className="h-9 w-full gap-2 border-dashed text-xs text-muted"
           >
-            <ImageIcon size={13} aria-hidden="true" />
+            <ImageIcon size={14} aria-hidden="true" />
             Use placeholder image
           </Button>
         )}
 
-        {/* Color palette */}
+        {/* Color */}
         <div className="flex flex-col gap-1.5">
           <SectionLabel>Color</SectionLabel>
-          <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Cell color palette">
-            {EARTH_TONES.map(({ name, hex }) => {
-              const isActive = (cell.bgColor ?? DEFAULT_CELL_BG) === hex;
-              return (
-                <Tooltip key={hex} content={name} side="bottom">
-                  <button
-                    type="button"
-                    onClick={() => onUpdate({ bgColor: hex })}
-                    aria-label={`Set color to ${name}`}
-                    aria-pressed={isActive}
-                    style={{ backgroundColor: hex }}
-                    className={[
-                      "h-7 w-full rounded-md border-2 transition-[border-color,transform] duration-150",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-canvas",
-                      "hover:scale-110 active:scale-95",
-                      isActive
-                        ? "border-accent-hi ring-1 ring-accent/60"
-                        : "border-transparent hover:border-white/20",
-                    ].join(" ")}
-                  />
-                </Tooltip>
-              );
-            })}
-          </div>
+          <ColorPicker
+            value={cell.bgColor ?? DEFAULT_CELL_BG}
+            onChange={(hex) => onUpdate({ bgColor: hex })}
+          />
         </div>
-      </div>
 
-      <Divider />
+        <Divider />
 
-      {/* ── Style ── */}
-      <div className="flex flex-col gap-1.5">
-        <SectionLabel>Corners</SectionLabel>
-        <RadiusPicker
-          value={cell.borderRadius ?? "2xl"}
-          onChange={(v) => onUpdate({ borderRadius: v })}
-        />
-      </div>
-
-      <Divider />
+        {/* Corners */}
+        <div className="flex flex-col gap-1.5">
+          <SectionLabel>Corners</SectionLabel>
+          <RadiusPicker
+            value={cell.borderRadius ?? "2xl"}
+            onChange={(v) => onUpdate({ borderRadius: v })}
+          />
+        </div>
+      </CollapsibleSection>
 
       {/* ── Layout ── */}
-      <div className="flex flex-col gap-3">
-        <SectionLabel>Layout</SectionLabel>
-
-        <div className="iso-card p-3">
-          <p className="mb-2 text-[10px] font-semibold text-muted">Position</p>
-          <div className="flex flex-col gap-2">
-            <SpinField
-              id="cell-col-start"
-              label="Col Start"
-              value={cell.colStart}
-              min={1}
-              max={maxColStart}
-              decreaseDisabled={cell.colStart <= 1 || wouldOverlap({ colStart: cell.colStart - 1 })}
-              increaseDisabled={cell.colStart >= maxColStart || wouldOverlap({ colStart: cell.colStart + 1 })}
-              onChange={(colStart) => onUpdate({ colStart })}
-            />
-            <SpinField
-              id="cell-row-start"
-              label="Row Start"
-              value={cell.rowStart}
-              min={1}
-              max={maxRowStart}
-              decreaseDisabled={cell.rowStart <= 1 || wouldOverlap({ rowStart: cell.rowStart - 1 })}
-              increaseDisabled={cell.rowStart >= maxRowStart || wouldOverlap({ rowStart: cell.rowStart + 1 })}
-              onChange={(rowStart) => onUpdate({ rowStart })}
-            />
-          </div>
+      <CollapsibleSection icon={LayoutGrid} title="Layout" defaultOpen={false}>
+        <div className="flex flex-col gap-2.5">
+          <p className="text-xs font-medium text-muted">Position</p>
+          <SpinField
+            id="cell-col-start"
+            label="Col Start"
+            value={cell.colStart}
+            min={1}
+            max={maxColStart}
+            decreaseDisabled={cell.colStart <= 1 || wouldOverlap({ colStart: cell.colStart - 1 })}
+            increaseDisabled={cell.colStart >= maxColStart || wouldOverlap({ colStart: cell.colStart + 1 })}
+            onChange={(colStart) => onUpdate({ colStart })}
+          />
+          <SpinField
+            id="cell-row-start"
+            label="Row Start"
+            value={cell.rowStart}
+            min={1}
+            max={maxRowStart}
+            decreaseDisabled={cell.rowStart <= 1 || wouldOverlap({ rowStart: cell.rowStart - 1 })}
+            increaseDisabled={cell.rowStart >= maxRowStart || wouldOverlap({ rowStart: cell.rowStart + 1 })}
+            onChange={(rowStart) => onUpdate({ rowStart })}
+          />
         </div>
 
-        <div className="iso-card p-3">
-          <p className="mb-2 text-[10px] font-semibold text-muted">Span</p>
-          <div className="flex flex-col gap-2">
-            <SpinField
-              id="cell-col-span"
-              label="Col Span"
-              value={cell.colSpan}
-              min={1}
-              max={maxColSpan}
-              decreaseDisabled={cell.colSpan <= 1}
-              increaseDisabled={cell.colSpan >= maxColSpan || wouldOverlap({ colSpan: cell.colSpan + 1 })}
-              onChange={(colSpan) => onUpdate({ colSpan })}
-            />
-            <SpinField
-              id="cell-row-span"
-              label="Row Span"
-              value={cell.rowSpan}
-              min={1}
-              max={maxRowSpan}
-              decreaseDisabled={cell.rowSpan <= 1}
-              increaseDisabled={cell.rowSpan >= maxRowSpan || wouldOverlap({ rowSpan: cell.rowSpan + 1 })}
-              onChange={(rowSpan) => onUpdate({ rowSpan })}
-            />
-          </div>
-        </div>
-      </div>
+        <Divider />
 
-      <Divider />
+        <div className="flex flex-col gap-2.5">
+          <p className="text-xs font-medium text-muted">Span</p>
+          <SpinField
+            id="cell-col-span"
+            label="Col Span"
+            value={cell.colSpan}
+            min={1}
+            max={maxColSpan}
+            decreaseDisabled={cell.colSpan <= 1}
+            increaseDisabled={cell.colSpan >= maxColSpan || wouldOverlap({ colSpan: cell.colSpan + 1 })}
+            onChange={(colSpan) => onUpdate({ colSpan })}
+          />
+          <SpinField
+            id="cell-row-span"
+            label="Row Span"
+            value={cell.rowSpan}
+            min={1}
+            max={maxRowSpan}
+            decreaseDisabled={cell.rowSpan <= 1}
+            increaseDisabled={cell.rowSpan >= maxRowSpan || wouldOverlap({ rowSpan: cell.rowSpan + 1 })}
+            onChange={(rowSpan) => onUpdate({ rowSpan })}
+          />
+        </div>
+      </CollapsibleSection>
 
       {/* ── Actions ── */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 pt-1">
         <Tooltip content={!canDuplicate ? "Grid is full" : "Duplicate cell (Ctrl+D)"} side="top">
           <Button
             variant="outline"
@@ -1170,9 +1209,9 @@ export function CellControls({
             onClick={onDuplicateCell}
             disabled={!canDuplicate}
             aria-label={`Duplicate ${cell.label || "this cell"}`}
-            className="flex-1 gap-2 text-xs"
+            className="flex-1 gap-2 text-xs border-accent/30 hover:bg-accent/10 hover:text-accent-hi"
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <rect x="9" y="9" width="13" height="13" rx="2" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
             </svg>
@@ -1180,13 +1219,13 @@ export function CellControls({
           </Button>
         </Tooltip>
         <Button
-          variant="destructive"
+          variant="ghost"
           size="sm"
           onClick={onDelete}
           aria-label={`Delete ${cell.label || "this cell"} (Delete key)`}
-          className="flex-1 gap-2 text-xs"
+          className="flex-1 gap-2 text-xs bg-danger/5 text-danger hover:bg-danger/15 hover:text-danger"
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
           Delete
