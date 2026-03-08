@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Toggle } from "@/components/ui/toggle";
 
 // ─── Tab types ────────────────────────────────────────────────────────────────
 
@@ -171,18 +173,12 @@ export function CodeOutput({ htmlCode, standaloneCode, jsxCode }: CodeOutputProp
           {copied ? "Code copied to clipboard" : ""}
         </span>
 
-        <button
-          type="button"
+        <Button
+          variant={copied ? "outline" : "outline"}
+          size="sm"
           onClick={handleCopy}
           aria-label={`Copy ${activeTabInfo.label} code`}
-          className={[
-            "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium",
-            "transition-colors duration-150",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
-            copied
-              ? "border border-accent/30 bg-accent/10 text-accent-hi"
-              : "border border-rim bg-surface-hi text-cream hover:border-rim-hi hover:bg-hover",
-          ].join(" ")}
+          className={copied ? "border-accent/30 bg-accent/10 text-accent-hi hover:bg-accent/15" : ""}
         >
           {copied ? (
             <>
@@ -200,7 +196,7 @@ export function CodeOutput({ htmlCode, standaloneCode, jsxCode }: CodeOutputProp
               Copy
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Tabs */}
@@ -210,24 +206,24 @@ export function CodeOutput({ htmlCode, standaloneCode, jsxCode }: CodeOutputProp
         aria-label="Export format"
       >
         {TABS.map((tab) => (
-          <button
+          <Toggle
             key={tab.id}
-            type="button"
+            pressed={activeTab === tab.id}
+            onPressedChange={() => setActiveTab(tab.id)}
             role="tab"
             aria-selected={activeTab === tab.id}
             aria-controls="code-panel"
             title={tab.description}
-            onClick={() => setActiveTab(tab.id)}
+            size="sm"
             className={[
-              "px-3 py-2 text-[11px] font-medium transition-colors duration-150",
-              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent",
+              "rounded-none px-3 py-2 text-[11px] font-medium hover:bg-transparent",
               activeTab === tab.id
-                ? "border-b-2 border-accent text-cream"
-                : "text-muted hover:text-cream",
+                ? "border-b-2 border-accent text-cream data-[state=on]:bg-transparent"
+                : "text-muted hover:text-cream data-[state=on]:bg-transparent",
             ].join(" ")}
           >
             {tab.label}
-          </button>
+          </Toggle>
         ))}
       </div>
 

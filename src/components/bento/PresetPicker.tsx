@@ -5,6 +5,7 @@ import { PRESETS } from "@/lib/bento/presets";
 import type { BentoConfig } from "@/lib/bento/types";
 import { DEFAULT_CELL_BG } from "@/lib/bento/theme";
 import { ChevronDown, LayoutTemplate } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface PresetPickerProps {
   onApplyPreset: (config: BentoConfig) => void;
@@ -54,11 +55,12 @@ export function PresetPicker({ onApplyPreset, onFillRegular }: PresetPickerProps
 
   return (
     <section aria-label="Layout presets" className="flex flex-col gap-2">
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted transition-colors duration-150 hover:text-cream focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+        className="w-full justify-between px-0 text-[11px] font-semibold uppercase tracking-wider text-muted hover:bg-transparent hover:text-cream"
       >
         <span className="flex items-center gap-1.5">
           <LayoutTemplate size={12} aria-hidden="true" />
@@ -69,14 +71,14 @@ export function PresetPicker({ onApplyPreset, onFillRegular }: PresetPickerProps
           aria-hidden="true"
           className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />
-      </button>
+      </Button>
 
       {open && (
         <div className="grid grid-cols-3 gap-2">
           {PRESETS.map((preset) => (
-            <button
+            <Button
               key={preset.id}
-              type="button"
+              variant="outline"
               title={preset.description}
               aria-label={`Apply ${preset.name} preset: ${preset.description}`}
               onClick={() => {
@@ -87,7 +89,7 @@ export function PresetPicker({ onApplyPreset, onFillRegular }: PresetPickerProps
                 }
                 setOpen(false);
               }}
-              className="flex flex-col gap-1 rounded-lg border border-rim bg-canvas/50 p-1.5 text-left transition-colors duration-150 hover:border-rim-hi hover:bg-surface-hi focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+              className="h-auto flex-col gap-1 p-1.5 text-left"
             >
               {preset.isRegular ? (
                 <div
@@ -118,7 +120,7 @@ export function PresetPicker({ onApplyPreset, onFillRegular }: PresetPickerProps
               <span className="truncate text-[10px] font-medium text-muted">
                 {preset.name}
               </span>
-            </button>
+            </Button>
           ))}
         </div>
       )}

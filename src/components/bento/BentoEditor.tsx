@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Undo2, Redo2, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import type { BentoConfig, BentoCell, GridConfig, ContentBlock } from "@/lib/bento/types";
 import { generateCode, generateStandaloneHTML, generateReactJSX } from "@/lib/bento/generator";
 import {
@@ -598,10 +600,10 @@ export function BentoEditor() {
       </a>
 
       {/* Header */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-rim bg-surface px-5">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-rim/60 bg-surface/90 backdrop-blur-md px-5">
         <div className="flex items-center gap-3">
           <div
-            className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent"
+            className="flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-700 shadow-[0_2px_10px_rgba(124,58,237,0.45)]"
             aria-hidden="true"
           >
             <svg
@@ -622,7 +624,7 @@ export function BentoEditor() {
           <h1 className="text-sm font-semibold tracking-tight text-cream">
             Bento Creator
           </h1>
-          <span className="hidden rounded-full border border-rim bg-surface-hi px-2 py-0.5 text-[10px] font-medium text-muted sm:inline">
+          <span className="hidden rounded-full border border-accent/20 bg-accent/8 px-2 py-0.5 text-[10px] font-medium text-accent dark:text-accent-hi sm:inline">
             Phase 4
           </span>
         </div>
@@ -630,41 +632,41 @@ export function BentoEditor() {
         {/* Header actions */}
         <div className="flex items-center gap-2">
           {/* Undo button */}
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="icon"
             onClick={undo}
             disabled={!canUndo}
             aria-label="Undo last action (Ctrl+Z)"
             title="Undo (Ctrl+Z)"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-rim bg-surface text-muted transition-colors duration-150 hover:border-rim-hi hover:bg-surface-hi hover:text-cream disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-canvas"
           >
             <Undo2 size={14} aria-hidden="true" />
-          </button>
+          </Button>
 
           {/* Redo button */}
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="icon"
             onClick={redo}
             disabled={!canRedo}
             aria-label="Redo last action (Ctrl+Y)"
             title="Redo (Ctrl+Y)"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-rim bg-surface text-muted transition-colors duration-150 hover:border-rim-hi hover:bg-surface-hi hover:text-cream disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-canvas"
           >
             <Redo2 size={14} aria-hidden="true" />
-          </button>
+          </Button>
 
-          <div className="mx-1 h-5 w-px bg-rim" aria-hidden="true" />
+          <Separator orientation="vertical" className="mx-1 h-5 bg-rim-hi/70 dark:bg-rim-hi/40" />
 
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => dispatch({ type: "RESET" })}
             aria-label="Reset layout to default"
-            className="rounded-lg border border-rim bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors duration-150 hover:border-rim-hi hover:bg-surface-hi hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
           >
             Reset
-          </button>
+          </Button>
 
-          <div className="mx-1 h-5 w-px bg-rim" aria-hidden="true" />
+          <Separator orientation="vertical" className="mx-1 h-5 bg-rim-hi/70 dark:bg-rim-hi/40" />
 
           <ThemeToggle />
         </div>
@@ -674,16 +676,17 @@ export function BentoEditor() {
       <div className="flex min-h-0 flex-1">
         {/* Sidebar */}
         <aside
-          className="flex w-72 shrink-0 flex-col gap-5 overflow-x-hidden overflow-y-auto border-r border-rim bg-surface p-4"
+          className="flex w-72 shrink-0 flex-col gap-5 overflow-x-hidden overflow-y-auto border-r border-rim/60 iso-sidebar p-4"
           aria-label="Configuration panel"
         >
           {/* How to use — collapsible */}
           <section aria-label="How to use">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setHowToOpen((v) => !v)}
               aria-expanded={howToOpen}
-              className="flex w-full items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted transition-colors duration-150 hover:text-cream focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+              className="w-full justify-between px-0 text-[11px] font-semibold uppercase tracking-wider text-muted hover:bg-transparent hover:text-cream"
             >
               <span>How to use</span>
               <ChevronDown
@@ -691,7 +694,7 @@ export function BentoEditor() {
                 aria-hidden="true"
                 className={`transition-transform duration-200 ${howToOpen ? "rotate-180" : ""}`}
               />
-            </button>
+            </Button>
             {howToOpen && (
               <ul className="mt-2 flex flex-col gap-1.5">
                 {[
@@ -719,7 +722,7 @@ export function BentoEditor() {
             )}
           </section>
 
-          <div className="h-px bg-rim" role="separator" aria-hidden="true" />
+          <Separator className="bg-rim-hi/70 dark:bg-rim-hi/40" />
 
           {/* Presets */}
           <PresetPicker
@@ -729,7 +732,7 @@ export function BentoEditor() {
             onFillRegular={() => dispatch({ type: "FILL_REGULAR" })}
           />
 
-          <div className="h-px bg-rim" role="separator" aria-hidden="true" />
+          <Separator className="bg-rim-hi/70 dark:bg-rim-hi/40" />
 
           {/* Grid settings */}
           <GridControls
@@ -741,7 +744,7 @@ export function BentoEditor() {
             onRowHoverDelta={setRowHoverDelta}
           />
 
-          <div className="h-px bg-rim" role="separator" aria-hidden="true" />
+          <Separator className="bg-rim-hi/70 dark:bg-rim-hi/40" />
 
           {/* Cell settings */}
           {selectedCell ? (

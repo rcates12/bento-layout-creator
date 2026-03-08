@@ -50,19 +50,26 @@ import { EARTH_TONES, DEFAULT_CELL_BG, PLACEHOLDER_IMAGE } from "@/lib/bento/the
 import { hasOverlap } from "@/lib/bento/utils";
 import { generateId } from "@/lib/bento/utils";
 import { Tooltip } from "./Tooltip";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ToggleGroup as ShadToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted/70">
+    <Label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-accent/80 dark:text-muted/80 gap-0">
       {children}
-    </p>
+    </Label>
   );
 }
 
 function Divider() {
-  return <div className="h-px bg-rim" role="separator" aria-hidden="true" />;
+  return <Separator className="bg-rim-hi/60 dark:bg-rim-hi/30" />;
 }
 
 function ControlRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -84,15 +91,18 @@ function MiniSelect({
   onChange: (v: string) => void;
 }) {
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="h-7 w-full rounded-md border border-rim bg-surface-hi px-1.5 text-[11px] text-cream transition-colors duration-150 focus:border-accent/60 focus:outline-none focus:ring-1 focus:ring-accent/40"
-    >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>{o.label}</option>
-      ))}
-    </select>
+    <Select value={value} onValueChange={(v) => v && onChange(v)}>
+      <SelectTrigger size="sm" className="h-7 w-full text-[11px]">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem key={o.value} value={o.value} className="text-[11px]">
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -109,24 +119,24 @@ function MiniInput({
 }) {
   if (multiline) {
     return (
-      <textarea
+      <Textarea
         rows={2}
         value={value}
         placeholder={placeholder}
         autoComplete="off"
         onChange={(e) => onChange(e.target.value)}
-        className="w-full resize-none rounded-md border border-rim bg-surface-hi/80 px-2 py-1.5 text-xs text-cream placeholder:text-muted/40 transition-colors duration-150 focus:border-accent/60 focus:outline-none focus:ring-1 focus:ring-accent/40"
+        className="min-h-0 resize-none text-xs"
       />
     );
   }
   return (
-    <input
+    <Input
       type="text"
       value={value}
       placeholder={placeholder}
       autoComplete="off"
       onChange={(e) => onChange(e.target.value)}
-      className="h-7 w-full rounded-md border border-rim bg-surface-hi/80 px-2 text-xs text-cream placeholder:text-muted/40 transition-colors duration-150 focus:border-accent/60 focus:outline-none focus:ring-1 focus:ring-accent/40"
+      className="h-7 text-xs"
     />
   );
 }
@@ -141,26 +151,25 @@ function ToggleGroup({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex rounded-md border border-rim overflow-hidden">
+    <ShadToggleGroup
+      value={[value]}
+      onValueChange={(vals) => { const v = vals[0]; if (v) onChange(v); }}
+      variant="outline"
+      spacing={0}
+      className="w-full"
+    >
       {options.map((o) => (
         <Tooltip key={o.value} content={o.title ?? o.label} side="bottom">
-          <button
-            type="button"
-            onClick={() => onChange(o.value)}
-            aria-pressed={value === o.value}
+          <ToggleGroupItem
+            value={o.value}
             aria-label={o.title ?? o.label}
-            className={[
-              "flex flex-1 items-center justify-center py-1.5 text-[10px] font-medium transition-colors duration-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent",
-              value === o.value
-                ? "bg-accent/20 text-accent-hi"
-                : "bg-surface-hi text-muted hover:text-cream",
-            ].join(" ")}
+            className="flex-1 text-[10px] font-medium data-[state=on]:bg-accent/20 data-[state=on]:text-accent-hi"
           >
             {o.icon ?? o.label}
-          </button>
+          </ToggleGroupItem>
         </Tooltip>
       ))}
-    </div>
+    </ShadToggleGroup>
   );
 }
 
@@ -199,18 +208,18 @@ function SpinField({
         {label}
       </label>
       <div className="flex items-center gap-1">
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="icon-xs"
           aria-label={`Decrease ${label}`}
           onClick={() => !decreaseDisabled && onChange(stepped(value, -step))}
           disabled={decreaseDisabled}
-          className="flex h-6 w-6 items-center justify-center rounded border border-rim bg-surface-hi text-muted transition-colors duration-150 hover:bg-hover hover:text-cream disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
         >
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
           </svg>
-        </button>
-        <input
+        </Button>
+        <Input
           id={id}
           type="number"
           min={min}
@@ -222,19 +231,19 @@ function SpinField({
             const v = parseFloat(e.target.value);
             if (!isNaN(v) && v >= min && v <= max) onChange(Math.round(v / step) * step);
           }}
-          className="h-6 w-10 rounded border border-rim bg-surface-hi/80 text-center text-xs font-medium tabular-nums text-cream [appearance:textfield] focus:border-accent/60 focus:outline-none focus:ring-1 focus:ring-accent/40 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="h-6 w-10 text-center text-xs font-medium tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="icon-xs"
           aria-label={`Increase ${label}`}
           onClick={() => !increaseDisabled && onChange(stepped(value, step))}
           disabled={increaseDisabled}
-          className="flex h-6 w-6 items-center justify-center rounded border border-rim bg-surface-hi text-muted transition-colors duration-150 hover:bg-hover hover:text-cream disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
         >
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -254,35 +263,29 @@ const RADIUS_OPTIONS: { value: BorderRadius; label: string; css: string }[] = [
 
 function RadiusPicker({ value, onChange }: { value: BorderRadius; onChange: (v: BorderRadius) => void }) {
   return (
-    <div className="flex gap-1 flex-wrap" role="group" aria-label="Border radius">
-      {RADIUS_OPTIONS.map((opt) => {
-        const isActive = value === opt.value;
-        return (
-          <Tooltip key={opt.value} content={opt.label} side="bottom">
-            <button
-              type="button"
-              aria-label={`Set border radius to ${opt.label}`}
-              aria-pressed={isActive}
-              onClick={() => onChange(opt.value)}
-              className={[
-                "flex h-7 w-7 shrink-0 items-center justify-center border transition-colors duration-150",
-                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent",
-                isActive
-                  ? "border-accent bg-accent/20 text-accent-hi"
-                  : "border-rim bg-surface-hi text-muted hover:border-rim-hi hover:text-cream",
-              ].join(" ")}
-              style={{ borderRadius: opt.css }}
-            >
-              <div
-                className="h-3 w-3 border border-current"
-                style={{ borderRadius: opt.css === "999px" ? "999px" : `calc(${opt.css} * 0.6)` }}
-                aria-hidden="true"
-              />
-            </button>
-          </Tooltip>
-        );
-      })}
-    </div>
+    <ShadToggleGroup
+      value={[value]}
+      onValueChange={(vals) => { const v = vals[0]; if (v) onChange(v as BorderRadius); }}
+      className="flex gap-1 flex-wrap w-full"
+      spacing={4}
+    >
+      {RADIUS_OPTIONS.map((opt) => (
+        <Tooltip key={opt.value} content={opt.label} side="bottom">
+          <ToggleGroupItem
+            value={opt.value}
+            aria-label={`Set border radius to ${opt.label}`}
+            className="h-7 w-7 shrink-0 border border-rim bg-surface-hi text-muted hover:border-rim-hi hover:text-cream data-[state=on]:border-accent data-[state=on]:bg-accent/20 data-[state=on]:text-accent-hi"
+            style={{ borderRadius: opt.css }}
+          >
+            <div
+              className="h-3 w-3 border border-current"
+              style={{ borderRadius: opt.css === "999px" ? "999px" : `calc(${opt.css} * 0.6)` }}
+              aria-hidden="true"
+            />
+          </ToggleGroupItem>
+        </Tooltip>
+      ))}
+    </ShadToggleGroup>
   );
 }
 
@@ -302,28 +305,23 @@ function ColorSwatches({
     ...EARTH_TONES,
   ];
   return (
-    <div className="flex flex-wrap gap-1" role="group">
-      {palette.map(({ name, hex }) => {
-        const isActive = value === hex;
-        return (
-          <Tooltip key={hex} content={name} side="bottom">
-            <button
-              type="button"
-              onClick={() => onChange(hex)}
-              aria-label={`Set to ${name}`}
-              aria-pressed={isActive}
-              style={{ backgroundColor: hex }}
-              className={[
-                "h-5 w-5 rounded border-2 transition-[border-color,transform] duration-150",
-                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent",
-                "hover:scale-110 active:scale-95",
-                isActive ? "border-accent-hi ring-1 ring-accent/60" : "border-transparent hover:border-white/20",
-              ].join(" ")}
-            />
-          </Tooltip>
-        );
-      })}
-    </div>
+    <ShadToggleGroup
+      value={[value]}
+      onValueChange={(vals) => { const v = vals[0]; if (v) onChange(v); }}
+      className="flex flex-wrap gap-1 w-full"
+      spacing={4}
+    >
+      {palette.map(({ name, hex }) => (
+        <Tooltip key={hex} content={name} side="bottom">
+          <ToggleGroupItem
+            value={hex}
+            aria-label={`Set to ${name}`}
+            style={{ backgroundColor: hex }}
+            className="h-5 w-5 min-w-0 rounded border-2 border-transparent p-0 transition-[border-color,transform] duration-150 hover:scale-110 active:scale-95 hover:border-white/20 data-[state=on]:border-accent-hi data-[state=on]:ring-1 data-[state=on]:ring-accent/60"
+          />
+        </Tooltip>
+      ))}
+    </ShadToggleGroup>
   );
 }
 
@@ -446,29 +444,27 @@ function ShadowPicker({
   onChange: (v: ShadowLevel) => void;
 }) {
   return (
-    <div className="flex gap-1.5">
+    <ShadToggleGroup
+      value={[value]}
+      onValueChange={(vals) => { const v = vals[0]; if (v) onChange(v as ShadowLevel); }}
+      spacing={4}
+      className="w-full"
+    >
       {SHADOW_LEVELS.map((s) => (
         <Tooltip key={s.value} content={s.title} side="bottom">
-          <button
-            type="button"
-            onClick={() => onChange(s.value)}
-            aria-pressed={value === s.value}
+          <ToggleGroupItem
+            value={s.value}
             aria-label={s.title}
-            className={[
-              "flex flex-1 h-10 items-center justify-center rounded-md border transition-colors duration-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent",
-              value === s.value
-                ? "border-accent/70 bg-accent/10"
-                : "border-rim bg-surface-hi hover:border-muted/50",
-            ].join(" ")}
+            className="flex flex-1 h-10 border border-rim bg-surface-hi hover:border-muted/50 data-[state=on]:border-accent/70 data-[state=on]:bg-accent/10"
           >
             <div
               className="w-5 h-5 rounded-sm bg-cream/80"
               style={{ boxShadow: s.css }}
             />
-          </button>
+          </ToggleGroupItem>
         </Tooltip>
       ))}
-    </div>
+    </ShadToggleGroup>
   );
 }
 
@@ -487,20 +483,18 @@ function BorderWidthPicker({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex gap-1.5">
+    <ShadToggleGroup
+      value={[value]}
+      onValueChange={(vals) => { const v = vals[0]; if (v) onChange(v); }}
+      spacing={4}
+      className="w-full"
+    >
       {BORDER_WIDTH_LEVELS.map((b) => (
         <Tooltip key={b.value} content={b.title} side="bottom">
-          <button
-            type="button"
-            onClick={() => onChange(b.value)}
-            aria-pressed={value === b.value}
+          <ToggleGroupItem
+            value={b.value}
             aria-label={b.title}
-            className={[
-              "flex flex-1 h-10 items-center justify-center rounded-md border transition-colors duration-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent",
-              value === b.value
-                ? "border-accent/70 bg-accent/10"
-                : "border-rim bg-surface-hi hover:border-muted/50",
-            ].join(" ")}
+            className="flex flex-1 h-10 border border-rim bg-surface-hi hover:border-muted/50 data-[state=on]:border-accent/70 data-[state=on]:bg-accent/10"
           >
             {b.px === 0 ? (
               <span className="text-[9px] font-semibold text-muted">—</span>
@@ -510,10 +504,10 @@ function BorderWidthPicker({
                 style={{ borderWidth: `${b.px}px`, borderStyle: "solid" }}
               />
             )}
-          </button>
+          </ToggleGroupItem>
         </Tooltip>
       ))}
-    </div>
+    </ShadToggleGroup>
   );
 }
 
@@ -724,23 +718,24 @@ function BlockCard({
       ].join(" ")}
     >
       {/* Header */}
-      <div className="flex items-center bg-surface-hi px-2 py-1.5 gap-1">
+      <div className="flex items-center bg-surface-hi/60 dark:bg-surface-hi px-2 py-1.5 gap-1 border-b border-rim/40">
         {/* Drag handle */}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon-xs"
           aria-label={`Drag to reorder ${meta.label} block`}
           title="Drag to reorder"
-          className="flex h-6 w-5 shrink-0 cursor-grab items-center justify-center rounded text-muted/40 transition-colors duration-100 hover:text-muted active:cursor-grabbing focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+          className="cursor-grab text-muted/40 hover:bg-transparent hover:text-muted active:cursor-grabbing"
           {...dragHandleProps}
         >
           <GripVertical size={13} aria-hidden="true" />
-        </button>
+        </Button>
 
         {/* Title */}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           onClick={() => setOpen((v) => !v)}
-          className="flex flex-1 min-w-0 items-center gap-1.5 text-left focus-visible:outline-none"
+          className="flex flex-1 min-w-0 h-auto py-0 justify-start gap-1.5 text-left hover:bg-transparent"
         >
           <Icon size={12} className={`shrink-0 ${meta.color}`} aria-hidden="true" />
           <span className="text-[11px] font-medium text-cream">{meta.label}</span>
@@ -749,48 +744,51 @@ function BlockCard({
             aria-hidden="true"
             className={`ml-auto shrink-0 text-muted transition-transform duration-150 ${open ? "rotate-180" : ""}`}
           />
-        </button>
+        </Button>
 
         {/* Reorder buttons */}
         <Tooltip content="Move up" side="top">
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={onMoveUp}
             disabled={isFirst}
             aria-label="Move block up"
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted/60 transition-colors duration-100 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-400"
+            className="text-muted/60 hover:bg-transparent hover:text-sky-400 focus-visible:ring-sky-400"
           >
             <ChevronUp size={13} aria-hidden="true" />
-          </button>
+          </Button>
         </Tooltip>
         <Tooltip content="Move down" side="top">
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={onMoveDown}
             disabled={isLast}
             aria-label="Move block down"
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted/60 transition-colors duration-100 hover:text-amber-400 disabled:cursor-not-allowed disabled:opacity-20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-400"
+            className="text-muted/60 hover:bg-transparent hover:text-amber-400 focus-visible:ring-amber-400"
           >
             <ChevronDown size={13} aria-hidden="true" />
-          </button>
+          </Button>
         </Tooltip>
 
         {/* Remove */}
         <Tooltip content="Remove block" side="top">
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={onRemove}
             aria-label={`Remove ${meta.label} block`}
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted transition-colors duration-100 hover:text-red-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-500"
+            className="text-muted hover:bg-transparent hover:text-red-400 focus-visible:ring-red-500"
           >
             <Trash2 size={10} aria-hidden="true" />
-          </button>
+          </Button>
         </Tooltip>
       </div>
 
       {/* Body */}
       {open && (
-        <div className="p-3 bg-canvas/40">
+        <div className="p-3 bg-surface/50 dark:bg-canvas/40">
           {block.type === "text" && (
             <TextBlockEditor block={block} onUpdate={(u) => onUpdate(u as Partial<TextBlock>)} />
           )}
@@ -848,14 +846,14 @@ function AddBlockButton({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant="outline"
       onClick={onClick}
-      className="flex flex-col items-center gap-1.5 rounded-lg border border-rim bg-surface-hi/50 py-3 text-muted transition-colors duration-150 hover:border-rim-hi hover:bg-surface-hi hover:text-cream focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+      className="flex h-auto flex-col items-center gap-1.5 py-3 text-muted"
     >
       <Icon size={16} className={color} aria-hidden="true" />
       <span className="text-[10px] font-medium">{label}</span>
-    </button>
+    </Button>
   );
 }
 
@@ -952,14 +950,13 @@ export function CellControls({
       {/* ── Label ── */}
       <div className="flex flex-col gap-1.5">
         <SectionLabel>Label</SectionLabel>
-        <input
+        <Input
           id="cell-label"
           type="text"
           value={cell.label}
           onChange={(e) => onUpdate({ label: e.target.value })}
           placeholder="Internal label…"
           autoComplete="off"
-          className="h-8 rounded-md border border-rim bg-surface-hi/80 px-3 text-sm text-cream placeholder:text-muted/50 transition-colors duration-150 focus:border-accent/60 focus:outline-none focus:ring-1 focus:ring-accent/40"
         />
       </div>
 
@@ -992,7 +989,7 @@ export function CellControls({
         </div>
 
         {blocks.length === 0 ? (
-          <p className="rounded-md border border-dashed border-rim/60 px-3 py-3 text-center text-[11px] text-muted/50 leading-relaxed">
+          <p className="rounded-md border border-dashed border-accent/20 dark:border-rim/60 px-3 py-3 text-center text-[11px] text-muted/50 leading-relaxed">
             No blocks yet — click an icon above
           </p>
         ) : (
@@ -1040,25 +1037,26 @@ export function CellControls({
             />
             <span className="flex-1 truncate text-[11px] text-muted/70">Placeholder image</span>
             <Tooltip content="Remove background image" side="left">
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="icon-sm"
                 onClick={() => onSetBgImage(null)}
                 aria-label="Remove background image"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-rim bg-surface-hi text-muted transition-colors duration-150 hover:border-red-500/40 hover:text-red-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-500"
+                className="hover:border-red-500/40 hover:text-red-400 focus-visible:ring-red-500"
               >
                 <ImageOff size={12} aria-hidden="true" />
-              </button>
+              </Button>
             </Tooltip>
           </div>
         ) : (
-          <button
-            type="button"
+          <Button
+            variant="outline"
             onClick={() => onSetBgImage(PLACEHOLDER_IMAGE)}
-            className="flex h-9 w-full items-center justify-center gap-2 rounded-md border border-dashed border-rim bg-surface-hi/30 text-[11px] text-muted transition-colors duration-150 hover:border-rim-hi hover:text-cream focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+            className="h-9 w-full gap-2 border-dashed text-[11px] text-muted"
           >
             <ImageIcon size={13} aria-hidden="true" />
             Use placeholder image
-          </button>
+          </Button>
         )}
 
         {/* Color palette */}
@@ -1108,8 +1106,8 @@ export function CellControls({
       <div className="flex flex-col gap-3">
         <SectionLabel>Layout</SectionLabel>
 
-        <div className="rounded-lg border border-rim bg-canvas/50 p-3">
-          <p className="mb-2 text-[10px] font-medium text-muted/60">Position</p>
+        <div className="iso-card p-3">
+          <p className="mb-2 text-[10px] font-semibold text-muted">Position</p>
           <div className="flex flex-col gap-2">
             <SpinField
               id="cell-col-start"
@@ -1134,8 +1132,8 @@ export function CellControls({
           </div>
         </div>
 
-        <div className="rounded-lg border border-rim bg-canvas/50 p-3">
-          <p className="mb-2 text-[10px] font-medium text-muted/60">Span</p>
+        <div className="iso-card p-3">
+          <p className="mb-2 text-[10px] font-semibold text-muted">Span</p>
           <div className="flex flex-col gap-2">
             <SpinField
               id="cell-col-span"
@@ -1166,31 +1164,33 @@ export function CellControls({
       {/* ── Actions ── */}
       <div className="flex gap-2">
         <Tooltip content={!canDuplicate ? "Grid is full" : "Duplicate cell (Ctrl+D)"} side="top">
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onDuplicateCell}
             disabled={!canDuplicate}
             aria-label={`Duplicate ${cell.label || "this cell"}`}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-rim bg-canvas/50 px-3 py-2 text-xs font-medium text-muted transition-colors duration-150 hover:border-rim-hi hover:bg-surface-hi hover:text-cream disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+            className="flex-1 gap-2 text-xs"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <rect x="9" y="9" width="13" height="13" rx="2" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
             </svg>
             Duplicate
-          </button>
+          </Button>
         </Tooltip>
-        <button
-          type="button"
+        <Button
+          variant="destructive"
+          size="sm"
           onClick={onDelete}
           aria-label={`Delete ${cell.label || "this cell"} (Delete key)`}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-rim bg-canvas/50 px-3 py-2 text-xs font-medium text-muted transition-colors duration-150 hover:border-danger/40 hover:bg-danger/10 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+          className="flex-1 gap-2 text-xs"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
           Delete
-        </button>
+        </Button>
       </div>
     </section>
   );

@@ -3,6 +3,7 @@
 import { useRef, useEffect, useCallback } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { Type, Image as ImageIcon, MousePointerClick } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type {
   BentoCell as BentoCellType,
   BorderRadius,
@@ -302,17 +303,18 @@ export function BentoCell({
       </div>
 
       {/* Delete button — top-right */}
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="icon-xs"
         onClick={(e) => { e.stopPropagation(); onDelete(); }}
         aria-label={`Delete ${label}`}
         title="Delete cell"
-        className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-black/25 text-white/40 opacity-0 backdrop-blur-sm transition-[opacity,background-color,color] duration-150 group-hover:opacity-100 hover:bg-red-900/60 hover:text-white focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+        className="absolute right-2 top-2 z-20 rounded-full bg-black/25 text-white/40 opacity-0 backdrop-blur-sm transition-[opacity,background-color,color] duration-150 group-hover:opacity-100 hover:bg-red-900/60 hover:text-white focus-visible:opacity-100 focus-visible:ring-red-500"
       >
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
-      </button>
+      </Button>
 
       {/* Cell content area */}
       <div className="relative z-[2] flex flex-1 flex-col gap-2 p-3 pt-7 pointer-events-none">
@@ -346,35 +348,38 @@ export function BentoCell({
           className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 flex items-center gap-0.5 rounded-full border border-white/20 bg-black/65 px-1.5 py-1.5 opacity-0 shadow-lg shadow-black/40 backdrop-blur-md transition-all duration-200 group-hover:opacity-100"
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             title="Add text block"
             aria-label="Add text block"
             onClick={(e) => { e.stopPropagation(); handleAddBlock("text"); }}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-blue-300/70 transition-all duration-100 hover:bg-white/10 hover:text-blue-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+            className="rounded-full text-blue-300/70 hover:bg-white/10 hover:text-blue-300"
           >
             <Type size={15} aria-hidden="true" />
-          </button>
+          </Button>
           <div className="h-4 w-px bg-white/15" aria-hidden="true" />
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             title="Add image block"
             aria-label="Add image block"
             onClick={(e) => { e.stopPropagation(); handleAddBlock("image"); }}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-emerald-300/70 transition-all duration-100 hover:bg-white/10 hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+            className="rounded-full text-emerald-300/70 hover:bg-white/10 hover:text-emerald-300"
           >
             <ImageIcon size={15} aria-hidden="true" />
-          </button>
+          </Button>
           <div className="h-4 w-px bg-white/15" aria-hidden="true" />
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             title="Add button block"
             aria-label="Add button block"
             onClick={(e) => { e.stopPropagation(); handleAddBlock("button"); }}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-amber-300/70 transition-all duration-100 hover:bg-white/10 hover:text-amber-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+            className="rounded-full text-amber-300/70 hover:bg-white/10 hover:text-amber-300"
           >
             <MousePointerClick size={15} aria-hidden="true" />
-          </button>
+          </Button>
         </div>
       )}
 

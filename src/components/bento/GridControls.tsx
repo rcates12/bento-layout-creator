@@ -3,6 +3,10 @@
 import { Columns2, Rows2, Expand } from "lucide-react";
 import type { GridConfig } from "@/lib/bento/types";
 import { Tooltip } from "./Tooltip";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface GridControlsProps {
   grid: GridConfig;
@@ -50,23 +54,23 @@ function NumberInput({
 }: NumberInputProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label
+      <Label
         htmlFor={id}
-        className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted"
+        className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-accent/80 dark:text-muted"
       >
         <span className="text-muted/70" aria-hidden="true">{icon}</span>
         {label}
-      </label>
+      </Label>
       <div className="flex items-center gap-2">
         <Tooltip content={decreaseTooltip ?? `Remove ${label.toLowerCase()}`} side="bottom">
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="icon-sm"
             aria-label={`Decrease ${label}`}
             onClick={() => value > min && onChange(value - 1)}
             onMouseEnter={() => onDecreaseHover?.(true)}
             onMouseLeave={() => onDecreaseHover?.(false)}
             disabled={value <= min}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-rim bg-surface-hi text-muted transition-colors duration-150 hover:border-rim-hi hover:bg-hover hover:text-cream disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-canvas"
           >
             <svg
               width="10"
@@ -79,10 +83,10 @@ function NumberInput({
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
             </svg>
-          </button>
+          </Button>
         </Tooltip>
 
-        <input
+        <Input
           id={id}
           type="number"
           min={min}
@@ -95,18 +99,18 @@ function NumberInput({
           }}
           spellCheck={false}
           autoComplete="off"
-          className="h-7 w-full rounded-md border border-rim bg-surface-hi/80 px-2 text-center text-sm font-medium tabular-nums text-cream [appearance:textfield] transition-colors duration-150 focus:border-accent/60 focus:outline-none focus:ring-1 focus:ring-accent/40 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="h-7 w-full text-center text-sm font-medium tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
 
         <Tooltip content={increaseTooltip ?? `Add ${label.toLowerCase()}`} side="bottom">
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="icon-sm"
             aria-label={`Increase ${label}`}
             onClick={() => value < max && onChange(value + 1)}
             onMouseEnter={() => onIncreaseHover?.(true)}
             onMouseLeave={() => onIncreaseHover?.(false)}
             disabled={value >= max}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-rim bg-surface-hi text-muted transition-colors duration-150 hover:border-rim-hi hover:bg-hover hover:text-cream disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-canvas"
           >
             <svg
               width="10"
@@ -123,7 +127,7 @@ function NumberInput({
                 d="M12 4.5v15m7.5-7.5h-15"
               />
             </svg>
-          </button>
+          </Button>
         </Tooltip>
       </div>
     </div>
@@ -171,28 +175,31 @@ export function GridControls({
       />
 
       <div className="flex flex-col gap-1.5">
-        <label
+        <Label
           htmlFor="grid-gap"
-          className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted"
+          className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-accent/80 dark:text-muted"
         >
           <span className="text-muted/70" aria-hidden="true">
             <Expand size={12} />
           </span>
           Gap
-        </label>
+        </Label>
         <Tooltip content="Space between cells" side="right" className="w-full">
-          <select
-            id="grid-gap"
-            value={grid.gap}
-            onChange={(e) => onUpdate({ gap: Number(e.target.value) })}
-            className="h-8 w-full rounded-md border border-rim bg-surface-hi px-2 text-sm text-cream transition-colors duration-150 focus:border-accent/60 focus:outline-none focus:ring-1 focus:ring-accent/40"
+          <Select
+            value={String(grid.gap)}
+            onValueChange={(v) => v !== null && onUpdate({ gap: Number(v) })}
           >
-            {GAP_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="grid-gap" className="h-8 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {GAP_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={String(opt.value)}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Tooltip>
       </div>
 

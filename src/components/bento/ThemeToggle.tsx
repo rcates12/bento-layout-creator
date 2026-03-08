@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Sun, Moon } from "lucide-react";
 import { Tooltip } from "./Tooltip";
+import { Toggle } from "@/components/ui/toggle";
 
 export function ThemeToggle() {
   const [isDark, setIsDark] = useState(false);
@@ -25,18 +26,19 @@ export function ThemeToggle() {
 
   return (
     <Tooltip content={isDark ? "Switch to light mode" : "Switch to dark mode"} side="bottom">
-      <button
-        type="button"
-        onClick={toggle}
+      <Toggle
+        pressed={isDark}
+        onPressedChange={toggle}
         aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-rim bg-surface text-muted transition-colors duration-150 hover:border-rim-hi hover:bg-surface-hi hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-canvas"
+        size="default"
+        className="h-8 w-8 border border-rim bg-transparent text-muted hover:border-rim-hi hover:bg-surface-hi hover:text-cream data-[state=on]:bg-surface-hi data-[state=on]:text-cream"
       >
         {isDark ? (
           <Sun size={14} aria-hidden="true" />
         ) : (
           <Moon size={14} aria-hidden="true" />
         )}
-      </button>
+      </Toggle>
     </Tooltip>
   );
 }

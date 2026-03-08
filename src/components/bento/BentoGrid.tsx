@@ -12,6 +12,7 @@ import type { DragMoveEvent, DragEndEvent } from "@dnd-kit/core";
 
 import { BentoCell, BentoCellOverlay } from "./BentoCell";
 import { StatusBanner } from "./StatusBanner";
+import { Button } from "@/components/ui/button";
 import type { BentoCell as BentoCellType, BentoConfig, ContentBlock } from "@/lib/bento/types";
 import { GAP_PX, getEmptyPositions, hasOverlap } from "@/lib/bento/utils";
 import { pointerToGridPosition } from "@/lib/bento/gridCollision";
@@ -63,8 +64,8 @@ function GhostTile({
   onAdd: () => void;
 }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
       onClick={onAdd}
       aria-label={`Add cell at column ${col}, row ${row}`}
       style={{
@@ -72,7 +73,7 @@ function GhostTile({
         gridRow: row,
         zIndex: 0,
       }}
-      className="flex items-center justify-center rounded-xl border border-dashed border-rim/60 bg-transparent text-ghost opacity-0 transition-opacity duration-200 hover:border-ghost hover:bg-surface-hi/50 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+      className="h-full w-full rounded-xl border border-dashed border-rim/60 bg-transparent text-ghost opacity-0 transition-opacity duration-200 hover:border-ghost hover:bg-surface-hi/50 hover:opacity-100 focus-visible:opacity-100"
     >
       <svg
         width="16"
@@ -85,7 +86,7 @@ function GhostTile({
       >
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
       </svg>
-    </button>
+    </Button>
   );
 }
 
@@ -319,13 +320,12 @@ export function BentoGrid({
                   Click a ghost tile or use the button below to add your first cell
                 </p>
               </div>
-              <button
-                type="button"
+              <Button
                 onClick={onAddCell}
-                className="mt-1 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-canvas transition-colors duration-150 hover:bg-accent-hi focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas active:opacity-90"
+                className="mt-1 border-transparent bg-gradient-to-r from-violet-600 to-purple-500 text-white shadow-[0_4px_14px_rgba(124,58,237,0.35)] hover:opacity-90 hover:shadow-[0_4px_18px_rgba(124,58,237,0.5)]"
               >
                 Add First Cell
-              </button>
+              </Button>
             </div>
           ) : (
             <div
@@ -465,19 +465,11 @@ export function BentoGrid({
         {/* Add cell button */}
         {cells.length > 0 && (
           <div className="flex items-center gap-3">
-            <button
-              type="button"
+            <Button
+              variant="outline"
               onClick={onAddCell}
               disabled={!canAddCell}
               aria-label="Add a new cell to the grid"
-              className={[
-                "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium",
-                "transition-colors duration-150",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
-                canAddCell
-                  ? "border-rim bg-surface text-cream hover:border-rim-hi hover:bg-surface-hi hover:text-cream"
-                  : "cursor-not-allowed border-rim/40 bg-surface/50 text-muted/50",
-              ].join(" ")}
             >
               <svg
                 width="13"
@@ -495,7 +487,7 @@ export function BentoGrid({
                 />
               </svg>
               Add Cell
-            </button>
+            </Button>
 
             {!canAddCell && (
               <StatusBanner variant="warning">
