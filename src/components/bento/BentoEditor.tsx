@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Undo2, Redo2, HelpCircle } from "lucide-react";
+import { Undo2, Redo2, HelpCircle, Code2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "./Tooltip";
 import type { BentoConfig, BentoCell, GridConfig, ContentBlock } from "@/lib/bento/types";
@@ -532,6 +532,9 @@ export function BentoEditor() {
   const [colHoverDelta, setColHoverDelta] = useState<1 | -1 | null>(null);
   const [rowHoverDelta, setRowHoverDelta] = useState<1 | -1 | null>(null);
 
+  // Export panel visibility
+  const [showExport, setShowExport] = useState(false);
+
   // Persist config to localStorage whenever it changes
   useEffect(() => {
     saveToStorage(config);
@@ -559,6 +562,12 @@ export function BentoEditor() {
         if (e.key === "d" && selectedCellId) {
           e.preventDefault();
           dispatch({ type: "DUPLICATE_CELL", payload: selectedCellId });
+          return;
+        }
+        // Ctrl+E — toggle export panel
+        if (e.key === "e") {
+          e.preventDefault();
+          setShowExport(prev => !prev);
           return;
         }
       }
@@ -635,6 +644,7 @@ export function BentoEditor() {
                 <span><kbd className="rounded bg-rim px-1">Esc</kbd> deselect</span>
                 <span><kbd className="rounded bg-rim px-1">Ctrl+D</kbd> duplicate</span>
                 <span><kbd className="rounded bg-rim px-1">Ctrl+Z / Y</kbd> undo / redo</span>
+                <span><kbd className="rounded bg-rim px-1">Ctrl+E</kbd> toggle export</span>
               </div>
             }
             side="bottom"
@@ -676,6 +686,25 @@ export function BentoEditor() {
             </Tooltip>
           </div>
 
+          {/* Export panel toggle */}
+          <Tooltip content="Toggle export panel (Ctrl+E)" side="bottom">
+            <button
+              type="button"
+              onClick={() => setShowExport(prev => !prev)}
+              aria-label="Toggle export panel (Ctrl+E)"
+              aria-pressed={showExport}
+              className={[
+                "flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors",
+                showExport
+                  ? "border-accent/60 bg-accent/15 text-accent hover:bg-accent/20"
+                  : "border-rim/60 bg-surface-hi text-muted hover:bg-hover/60 hover:text-cream/90",
+              ].join(" ")}
+            >
+              <Code2 size={14} aria-hidden="true" />
+              Export
+            </button>
+          </Tooltip>
+
           {/* Reset */}
           <Button
             variant="outline"
@@ -690,7 +719,7 @@ export function BentoEditor() {
       </header>
 
       {/* Body */}
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside
           className="flex w-[320px] shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-rim bg-surface"
@@ -768,43 +797,89 @@ export function BentoEditor() {
         {/* Main */}
         <main
           id="main-content"
-          className="flex min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-5"
+          className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden"
         >
-          <BentoGrid
-            config={config}
-            selectedCellId={selectedCellId}
-            colHoverDelta={colHoverDelta}
-            rowHoverDelta={rowHoverDelta}
-            onSelectCell={(id) =>
-              dispatch({ type: "SELECT_CELL", payload: id })
-            }
-            onAddCell={() => dispatch({ type: "ADD_CELL" })}
-            onAddCellAt={(col, row) =>
-              dispatch({
-                type: "ADD_CELL_AT",
-                payload: { colStart: col, rowStart: row },
-              })
-            }
-            onMoveCell={(id, colStart, rowStart) =>
-              dispatch({ type: "MOVE_CELL", payload: { id, colStart, rowStart } })
-            }
-            onUpdateCell={(id, updates) =>
-              dispatch({ type: "UPDATE_CELL", payload: { id, updates } })
-            }
-            onDeleteCell={(id) =>
-              dispatch({ type: "REMOVE_CELL", payload: id })
-            }
-            onAddBlock={(cellId, block) =>
-              dispatch({ type: "ADD_BLOCK", payload: { cellId, block } })
-            }
-            canAddCell={canAddCell}
+          {/* Canvas area — always full width beneath the overlay */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-5">
+            <BentoGrid
+              config={config}
+              selectedCellId={selectedCellId}
+              colHoverDelta={colHoverDelta}
+              rowHoverDelta={rowHoverDelta}
+              onSelectCell={(id) =>
+                dispatch({ type: "SELECT_CELL", payload: id })
+              }
+              onAddCell={() => dispatch({ type: "ADD_CELL" })}
+              onAddCellAt={(col, row) =>
+                dispatch({
+                  type: "ADD_CELL_AT",
+                  payload: { colStart: col, rowStart: row },
+                })
+              }
+              onMoveCell={(id, colStart, rowStart) =>
+                dispatch({ type: "MOVE_CELL", payload: { id, colStart, rowStart } })
+              }
+              onUpdateCell={(id, updates) =>
+                dispatch({ type: "UPDATE_CELL", payload: { id, updates } })
+              }
+              onDeleteCell={(id) =>
+                dispatch({ type: "REMOVE_CELL", payload: id })
+              }
+              onAddBlock={(cellId, block) =>
+                dispatch({ type: "ADD_BLOCK", payload: { cellId, block } })
+              }
+              canAddCell={canAddCell}
+            />
+          </div>
+
+          {/* Dim backdrop — sits between canvas and export panel */}
+          <div
+            aria-hidden="true"
+            onClick={() => setShowExport(false)}
+            className={[
+              "absolute inset-0 z-10 bg-black/65",
+              "transition-opacity duration-300 ease-in-out",
+              showExport ? "opacity-100" : "opacity-0 pointer-events-none",
+            ].join(" ")}
           />
 
-          <CodeOutput
-            htmlCode={generatedHTML}
-            standaloneCode={generatedStandalone}
-            jsxCode={generatedJSX}
-          />
+          {/* Export panel — overlay, always in DOM so transition plays */}
+          <aside
+            aria-label="Export panel"
+            aria-hidden={!showExport}
+            className={[
+              "absolute inset-y-0 right-0 z-20 flex w-[680px] flex-col overflow-hidden border-l border-rim bg-surface",
+              "shadow-[-8px_0_32px_rgba(0,0,0,0.45)]",
+              "transition-transform duration-300 ease-in-out",
+              showExport ? "translate-x-0" : "translate-x-full pointer-events-none",
+            ].join(" ")}
+          >
+            {/* Panel header */}
+            <div className="flex h-12 shrink-0 items-center justify-between border-b border-rim px-4">
+              <div className="flex items-center gap-2">
+                <Code2 size={15} className="text-muted" aria-hidden="true" />
+                <span className="text-sm font-medium text-cream">Export</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowExport(false)}
+                aria-label="Close export panel"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-hover/60 hover:text-cream/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+              >
+                <X size={15} aria-hidden="true" />
+              </button>
+            </div>
+
+            {/* Code output */}
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              <CodeOutput
+                htmlCode={generatedHTML}
+                standaloneCode={generatedStandalone}
+                jsxCode={generatedJSX}
+                panelMode
+              />
+            </div>
+          </aside>
         </main>
       </div>
     </div>

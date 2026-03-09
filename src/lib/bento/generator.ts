@@ -56,6 +56,37 @@ function indent(str: string, spaces: number): string {
   return str.split("\n").map((line) => pad + line).join("\n");
 }
 
+/** Escapes special HTML characters in user-supplied strings for safe generated HTML output. */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
+/**
+ * Escapes user text for safe embedding in JSX text content.
+ * JSX supports HTML entities, and curly braces must also be escaped
+ * to avoid being interpreted as JS expression delimiters.
+ */
+function escapeJsxText(str: string): string {
+  return escapeHtml(str)
+    .replace(/\{/g, "&#x7B;")
+    .replace(/\}/g, "&#x7D;");
+}
+
+/**
+ * Validates that a URL is safe for use in CSS url() or HTML src attributes.
+ * Only allows http/https/data URLs; rejects javascript: and other schemes.
+ */
+function sanitizeUrl(url: string): string {
+  const trimmed = url.trim();
+  if (/^(https?:|data:image\/)/i.test(trimmed)) return trimmed;
+  return "";
+}
+
 function sortedCells(config: BentoConfig): BentoCell[] {
   return [...config.cells].sort((a, b) => {
     if (a.rowStart !== b.rowStart) return a.rowStart - b.rowStart;
@@ -74,13 +105,14 @@ function renderTextBlockHTML(block: TextBlock): string {
     ALIGN_CLASS[block.align ?? "left"] ?? "text-left",
   ].join(" ");
   const colorStyle = block.color ? ` style="color: ${block.color}"` : "";
-  return `<p class="${cls}"${colorStyle}>${block.text || ""}</p>`;
+  return `<p class="${cls}"${colorStyle}>${escapeHtml(block.text || "")}</p>`;
 }
 
 function renderImageBlockHTML(block: ImageBlock): string {
   const fitClass = block.fit === "contain" ? "object-contain" : "object-cover";
-  const alt = block.alt ? ` alt="${block.alt}"` : ' alt=""';
-  return `<img src="${block.src ?? ""}" class="w-full ${fitClass}" style="min-height:60px;max-height:160px"${alt} loading="lazy" />`;
+  const safeSrc = sanitizeUrl(block.src ?? "");
+  const alt = block.alt ? ` alt="${escapeHtml(block.alt)}"` : ' alt=""';
+  return `<img src="${escapeHtml(safeSrc)}" class="w-full ${fitClass}" style="min-height:60px;max-height:160px"${alt} loading="lazy" />`;
 }
 
 function renderButtonBlockHTML(block: ButtonBlock): string {
@@ -101,7 +133,7 @@ function renderButtonBlockHTML(block: ButtonBlock): string {
   }
 
   const widthClass = block.fullWidth ? " w-full" : "";
-  return `<button type="button" class="${radiusClass} ${sizeClass} ${variantClass}${widthClass}"${inlineStyle}>${block.label || "Button"}</button>`;
+  return `<button type="button" class="${radiusClass} ${sizeClass} ${variantClass}${widthClass}"${inlineStyle}>${escapeHtml(block.label || "Button")}</button>`;
 }
 
 function renderBlockHTML(block: ContentBlock): string {
@@ -122,13 +154,14 @@ function renderTextBlockJSX(block: TextBlock): string {
     ALIGN_CLASS[block.align ?? "left"] ?? "text-left",
   ].join(" ");
   const colorStyle = block.color ? ` style={{ color: "${block.color}" }}` : "";
-  return `<p className="${cls}"${colorStyle}>${block.text || ""}</p>`;
+  return `<p className="${cls}"${colorStyle}>${escapeJsxText(block.text || "")}</p>`;
 }
 
 function renderImageBlockJSX(block: ImageBlock): string {
   const fitClass = block.fit === "contain" ? "object-contain" : "object-cover";
-  const alt = block.alt ? ` alt="${block.alt}"` : ' alt=""';
-  return `<img src="${block.src ?? ""}" className="w-full ${fitClass}" style={{ minHeight: "60px", maxHeight: "160px" }}${alt} loading="lazy" />`;
+  const safeSrc = sanitizeUrl(block.src ?? "");
+  const alt = block.alt ? ` alt="${escapeHtml(block.alt)}"` : ' alt=""';
+  return `<img src="${escapeHtml(safeSrc)}" className="w-full ${fitClass}" style={{ minHeight: "60px", maxHeight: "160px" }}${alt} loading="lazy" />`;
 }
 
 function renderButtonBlockJSX(block: ButtonBlock): string {
@@ -149,7 +182,7 @@ function renderButtonBlockJSX(block: ButtonBlock): string {
   }
 
   const widthClass = block.fullWidth ? " w-full" : "";
-  return `<button type="button" className="${radiusClass} ${sizeClass} ${variantClass}${widthClass}"${styleStr}>${block.label || "Button"}</button>`;
+  return `<button type="button" className="${radiusClass} ${sizeClass} ${variantClass}${widthClass}"${styleStr}>${escapeJsxText(block.label || "Button")}</button>`;
 }
 
 function renderBlockJSX(block: ContentBlock): string {
@@ -176,26 +209,32 @@ function cellClasses(cell: BentoCell): string {
 function cellStyleAttr(cell: BentoCell): string {
   const parts: string[] = [];
   if (cell.bgColor) parts.push(`background-color: ${cell.bgColor}`);
-  if (cell.bgImage) parts.push(`background-image: url(${cell.bgImage}); background-size: cover; background-position: center`);
+  if (cell.bgImage) {
+    const safeBgImage = sanitizeUrl(cell.bgImage);
+    if (safeBgImage) parts.push(`background-image: url(${escapeHtml(safeBgImage)}); background-size: cover; background-position: center`);
+  }
   return parts.length ? ` style="${parts.join("; ")}"` : "";
 }
 
 function cellStyleObj(cell: BentoCell): string {
   const parts: string[] = [];
   if (cell.bgColor) parts.push(`backgroundColor: "${cell.bgColor}"`);
-  if (cell.bgImage) parts.push(`backgroundImage: "url(${cell.bgImage})", backgroundSize: "cover", backgroundPosition: "center"`);
+  if (cell.bgImage) {
+    const safeBgImage = sanitizeUrl(cell.bgImage);
+    if (safeBgImage) parts.push(`backgroundImage: "url(${escapeHtml(safeBgImage)})", backgroundSize: "cover", backgroundPosition: "center"`);
+  }
   return parts.length ? ` style={{ ${parts.join(", ")} }}` : "";
 }
 
 function cellInnerHTML(cell: BentoCell): string {
   const blocks = cell.blocks ?? [];
-  if (blocks.length === 0) return cell.label || "Cell";
+  if (blocks.length === 0) return escapeHtml(cell.label || "Cell");
   return blocks.map(renderBlockHTML).join("\n");
 }
 
 function cellInnerJSX(cell: BentoCell): string {
   const blocks = cell.blocks ?? [];
-  if (blocks.length === 0) return cell.label || "Cell";
+  if (blocks.length === 0) return escapeJsxText(cell.label || "Cell");
   return blocks.map(renderBlockJSX).join("\n");
 }
 
