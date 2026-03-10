@@ -288,7 +288,10 @@ export function BentoCell({
         {...listeners}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
-        className="absolute inset-x-0 top-0 z-20 flex h-7 cursor-grab items-center justify-center opacity-0 transition-opacity duration-150 group-hover:opacity-100 active:cursor-grabbing"
+        className={[
+          "bento-drag-handle absolute inset-x-0 top-0 z-20 flex h-7 cursor-grab items-center justify-center transition-opacity duration-150 active:cursor-grabbing",
+          isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+        ].join(" ")}
         aria-label={`Drag to reposition ${label}`}
         role="button"
         tabIndex={0}
@@ -309,7 +312,12 @@ export function BentoCell({
         onClick={(e) => { e.stopPropagation(); onDelete(); }}
         aria-label={`Delete ${label}`}
         title="Delete cell"
-        className="absolute right-2 top-2 z-20 rounded-full bg-black/25 text-white/40 opacity-0 backdrop-blur-sm transition-[opacity,background-color,color] duration-150 group-hover:opacity-100 hover:bg-red-900/60 hover:text-white focus-visible:opacity-100 focus-visible:ring-red-500"
+        className={[
+          "bento-delete-btn absolute right-1.5 top-1.5 z-20 rounded-full bg-black/25 text-white/40 backdrop-blur-sm",
+          "transition-[opacity,background-color,color] duration-150",
+          "hover:bg-red-900/60 hover:text-white focus-visible:opacity-100 focus-visible:ring-red-500",
+          isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+        ].join(" ")}
       >
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -342,10 +350,15 @@ export function BentoCell({
         )}
       </div>
 
-      {/* Quick-add block bar — bottom-center, on hover */}
+      {/* Quick-add block bar — bottom-center, on hover or when selected */}
       {onAddBlock && (
         <div
-          className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 flex items-center gap-0.5 rounded-full border border-white/20 bg-black/65 px-1.5 py-1.5 opacity-0 shadow-lg shadow-black/40 backdrop-blur-md transition-all duration-200 group-hover:opacity-100"
+          className={[
+            "absolute bottom-3 left-1/2 z-20 -translate-x-1/2 flex items-center gap-0.5",
+            "rounded-full border border-white/20 bg-black/65 px-1.5 py-1.5",
+            "shadow-lg shadow-black/40 backdrop-blur-md transition-all duration-200",
+            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+          ].join(" ")}
           onClick={(e) => e.stopPropagation()}
         >
           <Button
@@ -393,7 +406,11 @@ export function BentoCell({
         onPointerMove={onResizeMove}
         onPointerUp={onResizeEnd}
         title="Drag to resize"
-        className="absolute bottom-2 right-2 z-20 flex h-5 w-5 cursor-se-resize items-end justify-end opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+        className={[
+          "bento-resize-handle absolute bottom-1.5 right-1.5 z-20 flex h-6 w-6 cursor-se-resize items-end justify-end",
+          "transition-opacity duration-150",
+          isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+        ].join(" ")}
         aria-hidden="true"
       >
         <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" className="text-white/25">

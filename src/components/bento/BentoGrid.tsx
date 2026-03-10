@@ -5,6 +5,7 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -131,9 +132,10 @@ export function BentoGrid({
   // Empty grid positions for ghost tiles
   const emptyPositions = useMemo(() => getEmptyPositions(config), [config]);
 
-  // dnd-kit sensors — require 6px movement before activating drag
+  // dnd-kit sensors — pointer requires 6px movement; touch uses 200ms press-and-hold
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
   );
 
   // Active dragging cell (for DragOverlay)

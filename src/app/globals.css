@@ -333,3 +333,44 @@ body {
     @apply font-sans;
   }
 }
+
+/* ─── Touch / coarse pointer enhancements ───────────────────────────────── */
+
+/* On touch-primary devices (no hover), always show cell controls so they're
+   accessible without needing a hover state. The isSelected state also shows
+   them, but this ensures ghost cells / non-selected cells are still reachable. */
+@media (hover: none) {
+  .bento-drag-handle,
+  .bento-delete-btn,
+  .bento-resize-handle {
+    opacity: 1 !important;
+  }
+}
+
+/* On coarse-pointer devices (touchscreens), increase minimum tap target sizes
+   to meet the 44px accessibility guideline. */
+@media (pointer: coarse) {
+  .bento-drag-handle {
+    min-height: 2.75rem; /* 44px */
+  }
+
+  .bento-resize-handle {
+    min-width: 2.5rem;   /* 40px */
+    min-height: 2.5rem;
+  }
+
+  .bento-delete-btn {
+    min-width: 2.25rem;  /* 36px */
+    min-height: 2.25rem;
+  }
+
+  .bento-spin-btn {
+    min-width: 2.25rem;  /* 36px */
+    min-height: 2.25rem;
+  }
+
+  .bento-block-action {
+    min-width: 2.75rem;  /* 44px */
+    min-height: 2.75rem;
+  }
+}

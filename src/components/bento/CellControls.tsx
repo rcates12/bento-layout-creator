@@ -262,6 +262,7 @@ function SpinField({
           aria-label={`Decrease ${label}`}
           onClick={() => !decreaseDisabled && onChange(stepped(value, -step))}
           disabled={decreaseDisabled}
+          className="bento-spin-btn"
         >
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
@@ -287,6 +288,7 @@ function SpinField({
           aria-label={`Increase ${label}`}
           onClick={() => !increaseDisabled && onChange(stepped(value, step))}
           disabled={increaseDisabled}
+          className="bento-spin-btn"
         >
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -843,7 +845,7 @@ function BlockCard({
           <button
             type="button"
             aria-label={`Drag to reorder ${meta.label} block`}
-            className="flex h-full items-center px-2 cursor-grab text-muted/50 hover:text-muted transition-colors active:cursor-grabbing"
+            className="bento-block-action flex h-full items-center px-2 cursor-grab text-muted/50 hover:text-muted transition-colors active:cursor-grabbing"
             {...dragHandleProps}
           >
             <GripVertical size={14} aria-hidden="true" />
@@ -872,7 +874,7 @@ function BlockCard({
             type="button"
             onClick={onRemove}
             aria-label={`Remove ${meta.label} block`}
-            className="flex h-full items-center px-2 text-muted/60 hover:text-red-400 transition-colors"
+            className="bento-block-action flex h-full items-center px-2 text-muted/60 hover:text-red-400 transition-colors"
           >
             <Trash2 size={12} aria-hidden="true" />
           </button>

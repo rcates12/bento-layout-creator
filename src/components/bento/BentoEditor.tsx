@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Undo2, Redo2, HelpCircle, Code2, X } from "lucide-react";
+import { Undo2, Redo2, HelpCircle, Code2, X, Menu, RotateCcw, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "./Tooltip";
 import type { BentoConfig, BentoCell, GridConfig, ContentBlock } from "@/lib/bento/types";
@@ -535,6 +535,18 @@ export function BentoEditor() {
   // Export panel visibility
   const [showExport, setShowExport] = useState(false);
 
+  // Sidebar visibility (overlay drawer on tablet, always open on desktop)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Initialise sidebar open state based on screen width
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    setIsSidebarOpen(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsSidebarOpen(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   // Persist config to localStorage whenever it changes
   useEffect(() => {
     saveToStorage(config);
@@ -607,6 +619,17 @@ export function BentoEditor() {
       {/* Header */}
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-rim bg-surface px-4">
         <div className="flex items-center gap-2">
+          {/* Sidebar toggle — tablet only (hidden on desktop) */}
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen((prev) => !prev)}
+            aria-label="Toggle controls panel"
+            aria-expanded={isSidebarOpen}
+            className="lg:hidden flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover/60 hover:text-cream/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+          >
+            <Menu size={16} aria-hidden="true" />
+          </button>
+
           <svg
             width="26"
             height="26"
@@ -701,7 +724,7 @@ export function BentoEditor() {
               ].join(" ")}
             >
               <Code2 size={14} aria-hidden="true" />
-              Export
+              <span className="hidden lg:inline">Export</span>
             </button>
           </Tooltip>
 
@@ -713,18 +736,50 @@ export function BentoEditor() {
             aria-label="Reset layout to default"
             className="h-8 border-0 bg-[#696969] text-xs font-bold text-[#000000] hover:bg-[#575757]"
           >
-            Reset
+            <RotateCcw size={13} className="lg:hidden" aria-hidden="true" />
+            <span className="hidden lg:inline">Reset</span>
           </Button>
         </div>
       </header>
 
       {/* Body */}
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        {/* Sidebar backdrop — tablet only, shown when sidebar is open */}
+        <div
+          aria-hidden="true"
+          onClick={() => setIsSidebarOpen(false)}
+          className={[
+            "absolute inset-0 z-30 bg-black/60 lg:hidden",
+            "transition-opacity duration-300 ease-in-out",
+            isSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none",
+          ].join(" ")}
+        />
+
         {/* Sidebar */}
         <aside
-          className="flex w-[320px] shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-rim bg-surface"
+          className={[
+            "flex w-[320px] shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-rim bg-surface",
+            // Below lg: absolute overlay drawer
+            "absolute inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out",
+            // On desktop: static in-flow (override absolute positioning)
+            "lg:relative lg:inset-auto lg:z-auto lg:translate-x-0",
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full",
+          ].join(" ")}
           aria-label="Configuration panel"
         >
+          {/* Sidebar header — close button on tablet */}
+          <div className="lg:hidden flex h-10 shrink-0 items-center justify-between border-b border-rim px-4">
+            <span className="text-xs font-semibold text-muted uppercase tracking-widest">Controls</span>
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              aria-label="Close controls panel"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-hover/60 hover:text-cream/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+            >
+              <X size={15} aria-hidden="true" />
+            </button>
+          </div>
+
           {/* Grid settings panel */}
           <div className="px-4 py-4">
             <GridControls
@@ -800,7 +855,27 @@ export function BentoEditor() {
           className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden"
         >
           {/* Canvas area — always full width beneath the overlay */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-5">
+          <div className="flex min-h-0 flex-1 flex-col overflow-x-auto overflow-y-auto p-5">
+            {selectedCell && (selectedCell.blocks?.length ?? 0) > 0 && !isSidebarOpen && (
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(true)}
+                className="lg:hidden mb-3 flex w-full items-center justify-between gap-2 rounded-lg border border-purple-500/50 bg-purple-500/15 px-4 py-3 text-sm font-medium text-purple-300 shadow-sm shadow-purple-900/20 active:scale-[0.98] active:bg-purple-500/25 transition-all shrink-0"
+              >
+                <span className="flex items-center gap-2.5">
+                  {/* Pulsing dot indicator */}
+                  <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-purple-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400" />
+                  </span>
+                  <PanelLeftOpen size={15} aria-hidden="true" />
+                  Edit block styles
+                </span>
+                <span className="rounded-md bg-purple-500/25 px-2 py-0.5 text-xs font-semibold tracking-wide uppercase text-purple-200">
+                  Open Controls →
+                </span>
+              </button>
+            )}
             <BentoGrid
               config={config}
               selectedCellId={selectedCellId}
@@ -825,9 +900,10 @@ export function BentoEditor() {
               onDeleteCell={(id) =>
                 dispatch({ type: "REMOVE_CELL", payload: id })
               }
-              onAddBlock={(cellId, block) =>
-                dispatch({ type: "ADD_BLOCK", payload: { cellId, block } })
-              }
+              onAddBlock={(cellId, block) => {
+                dispatch({ type: "ADD_BLOCK", payload: { cellId, block } });
+                setIsSidebarOpen(true);
+              }}
               canAddCell={canAddCell}
             />
           </div>
@@ -848,7 +924,7 @@ export function BentoEditor() {
             aria-label="Export panel"
             aria-hidden={!showExport}
             className={[
-              "absolute inset-y-0 right-0 z-20 flex w-[680px] flex-col overflow-hidden border-l border-rim bg-surface",
+              "absolute inset-y-0 right-0 z-20 flex w-full md:w-[480px] lg:w-[680px] flex-col overflow-hidden border-l border-rim bg-surface",
               "shadow-[-8px_0_32px_rgba(0,0,0,0.45)]",
               "transition-transform duration-300 ease-in-out",
               showExport ? "translate-x-0" : "translate-x-full pointer-events-none",
