@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-04-11 — Plan A: Polish & UX
+
+### Two-click confirmation uses useState + useRef timer (not useReducer)
+**Rationale:** Confirm state is purely UI-local (not part of BentoState) and auto-resets after 2s. `useState` for the boolean flag (triggers visual re-render) and `useRef` for the timer ID (avoids stale closure in cleanup). No new reducer action types were added.
+
+### Keyboard Delete confirm uses ref only (no visual feedback)
+**Rationale:** There is no UI button to change appearance for keyboard shortcuts. A `useRef<boolean>` tracks whether the first Delete/Backspace keypress already fired, and a `setTimeout` resets it after 2s. No state → no extra re-renders.
+
+### Style clipboard uses useRef + separate hasStyleClipboard useState
+**Rationale:** The clipboard contents (`Partial<BentoCell>`) do not need to trigger re-renders on their own. `useRef` stores the data; a companion `useState<boolean>` (hasStyleClipboard) controls the "Paste Style" button visibility. This follows the Vercel React guideline to use `useRef` for persisted-across-renders non-render-triggering values.
+
+### Style clipboard copies bgColor, bgImage, borderRadius only
+**Rationale:** These are the visual appearance properties present on `BentoCell`. `grain` and `shadow` are not currently fields on `BentoCell` (they live on content blocks). If more visual fields are added, extend the clipboard object accordingly.
+
+### Recent colors uses useRef (session-only, no state)
+**Rationale:** Recent colors mutate in-place and are passed as a prop. Since color changes already cause a state update (via `UPDATE_CELL`), the next render will read the updated ref value. No extra re-renders needed. Not persisted to localStorage (session-only per spec).
+
+### Arrow-key navigation uses colStart/rowStart comparison (not pixel geometry)
+**Rationale:** `findAdjacentCell` compares grid positions (integer colStart/rowStart) rather than pixel bounding boxes. This is simpler, deterministic, and works correctly regardless of cell size. Ties are broken by rowStart proximity (for left/right) or colStart proximity (for up/down).
+
+### HUD badge rendered in BentoCell and BentoCellOverlay
+**Rationale:** BentoGrid computes `hudLabel` and passes it as a prop. BentoCell renders it as an absolutely-positioned pill. BentoCellOverlay also accepts `hudLabel` for display during drag. No animation on the SVG — the badge is a plain div, keeping the render path simple.
+
+---
+
 ## 2026-03-07 — Phase 2 Interactions + Design
 
 ### DndContext lives in BentoGrid (not BentoEditor)

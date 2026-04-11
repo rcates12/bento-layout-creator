@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Undo2, Redo2, HelpCircle, Code2, X, Menu, RotateCcw, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "./Tooltip";
@@ -11,6 +11,7 @@ import {
   generateId,
   clampCell,
   hasOverlap,
+  findAdjacentCell,
 } from "@/lib/bento/utils";
 import { INITIAL_CELL_COLORS, EARTH_TONES } from "@/lib/bento/theme";
 import { useHistoryReducer } from "@/lib/bento/useHistoryReducer";
@@ -532,6 +533,21 @@ export function BentoEditor() {
   const [colHoverDelta, setColHoverDelta] = useState<1 | -1 | null>(null);
   const [rowHoverDelta, setRowHoverDelta] = useState<1 | -1 | null>(null);
 
+  // Feature 1: Reset confirm
+  const [confirmReset, setConfirmReset] = useState(false);
+  const confirmResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Feature 1: Keyboard delete confirm (ref only — no visual state needed)
+  const confirmDeleteKbdRef = useRef(false);
+  const confirmDeleteKbdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Feature 2: Style clipboard
+  const styleClipboardRef = useRef<Partial<BentoCell>>({});
+  const [hasStyleClipboard, setHasStyleClipboard] = useState(false);
+
+  // Feature 5: Recent colors (up to 6, session-only)
+  const recentColorsRef = useRef<string[]>([]);
+
   // Export panel visibility
   const [showExport, setShowExport] = useState(false);
 
@@ -545,6 +561,14 @@ export function BentoEditor() {
     const handler = (e: MediaQueryListEvent) => setIsSidebarOpen(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  // Cleanup confirm timers on unmount
+  useEffect(() => {
+    return () => {
+      if (confirmResetTimerRef.current) clearTimeout(confirmResetTimerRef.current);
+      if (confirmDeleteKbdTimerRef.current) clearTimeout(confirmDeleteKbdTimerRef.current);
+    };
   }, []);
 
   // Persist config to localStorage whenever it changes
@@ -588,7 +612,16 @@ export function BentoEditor() {
       if (selectedCellId && !inInput) {
         if (e.key === "Delete" || e.key === "Backspace") {
           e.preventDefault();
-          dispatch({ type: "REMOVE_CELL", payload: selectedCellId });
+          if (confirmDeleteKbdRef.current) {
+            if (confirmDeleteKbdTimerRef.current) clearTimeout(confirmDeleteKbdTimerRef.current);
+            confirmDeleteKbdRef.current = false;
+            dispatch({ type: "REMOVE_CELL", payload: selectedCellId });
+          } else {
+            confirmDeleteKbdRef.current = true;
+            confirmDeleteKbdTimerRef.current = setTimeout(() => {
+              confirmDeleteKbdRef.current = false;
+            }, 2000);
+          }
           return;
         }
         if (e.key === "Escape") {
@@ -596,11 +629,24 @@ export function BentoEditor() {
           dispatch({ type: "SELECT_CELL", payload: null });
           return;
         }
+        // Arrow keys — navigate to adjacent cell
+        if (e.key === "ArrowRight" || e.key === "ArrowLeft" || e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          const dirMap: Record<string, "right" | "left" | "down" | "up"> = {
+            ArrowRight: "right",
+            ArrowLeft: "left",
+            ArrowDown: "down",
+            ArrowUp: "up",
+          };
+          const nextId = findAdjacentCell(config.cells, selectedCellId, dirMap[e.key]);
+          if (nextId) dispatch({ type: "SELECT_CELL", payload: nextId });
+          return;
+        }
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo, selectedCellId, dispatch]);
+  }, [undo, redo, selectedCellId, dispatch, config.cells]);
 
   const generatedHTML = useMemo(() => generateCode(config), [config]);
   const generatedStandalone = useMemo(() => generateStandaloneHTML(config), [config]);
@@ -732,12 +778,31 @@ export function BentoEditor() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => dispatch({ type: "RESET" })}
-            aria-label="Reset layout to default"
-            className="h-8 border-0 bg-[#696969] text-xs font-bold text-[#000000] hover:bg-[#575757]"
+            onClick={() => {
+              if (confirmReset) {
+                if (confirmResetTimerRef.current) clearTimeout(confirmResetTimerRef.current);
+                setConfirmReset(false);
+                dispatch({ type: "RESET" });
+              } else {
+                setConfirmReset(true);
+                confirmResetTimerRef.current = setTimeout(() => setConfirmReset(false), 2000);
+              }
+            }}
+            aria-label={confirmReset ? "Confirm reset layout" : "Reset layout to default"}
+            className={
+              confirmReset
+                ? "h-8 border-0 bg-red-600 text-xs font-bold text-white hover:bg-red-700"
+                : "h-8 border-0 bg-[#696969] text-xs font-bold text-[#000000] hover:bg-[#575757]"
+            }
           >
-            <RotateCcw size={13} className="lg:hidden" aria-hidden="true" />
-            <span className="hidden lg:inline">Reset</span>
+            {confirmReset ? (
+              "Sure?"
+            ) : (
+              <>
+                <RotateCcw size={13} className="lg:hidden" aria-hidden="true" />
+                <span className="hidden lg:inline">Reset</span>
+              </>
+            )}
           </Button>
         </div>
       </header>
@@ -802,12 +867,16 @@ export function BentoEditor() {
                 cell={selectedCell}
                 grid={config.grid}
                 cells={config.cells}
-                onUpdate={(updates) =>
+                onUpdate={(updates) => {
+                  if (updates.bgColor) {
+                    const hex = updates.bgColor;
+                    recentColorsRef.current = [hex, ...recentColorsRef.current.filter((c) => c !== hex)].slice(0, 6);
+                  }
                   dispatch({
                     type: "UPDATE_CELL",
                     payload: { id: selectedCell.id, updates },
-                  })
-                }
+                  });
+                }}
                 onDelete={() =>
                   dispatch({ type: "REMOVE_CELL", payload: selectedCell.id })
                 }
@@ -830,6 +899,24 @@ export function BentoEditor() {
                   dispatch({ type: "DUPLICATE_CELL", payload: selectedCell.id })
                 }
                 canDuplicate={canAddCell}
+                onCopyStyle={() => {
+                  styleClipboardRef.current = {
+                    bgColor: selectedCell.bgColor,
+                    bgImage: selectedCell.bgImage,
+                    borderRadius: selectedCell.borderRadius,
+                  };
+                  setHasStyleClipboard(true);
+                }}
+                onPasteStyle={() => {
+                  if (Object.keys(styleClipboardRef.current).length > 0) {
+                    dispatch({
+                      type: "UPDATE_CELL",
+                      payload: { id: selectedCell.id, updates: styleClipboardRef.current },
+                    });
+                  }
+                }}
+                hasStyleClipboard={hasStyleClipboard}
+                recentColors={recentColorsRef.current}
               />
             ) : (
               <div className="flex flex-col gap-2">

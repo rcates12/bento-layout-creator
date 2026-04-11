@@ -434,38 +434,47 @@ export function BentoGrid({
               )}
 
               {/* Cells */}
-              {cells.map((cell, index) => (
-                <BentoCell
-                  key={cell.id}
-                  cell={getEffectiveCell(cell)}
-                  index={index}
-                  isSelected={selectedCellId === cell.id}
-                  isDraggingActive={activeDragId === cell.id}
-                  onClick={() =>
-                    onSelectCell(selectedCellId === cell.id ? null : cell.id)
-                  }
-                  onDelete={() => onDeleteCell(cell.id)}
-                  onAddBlock={(block) => {
-                    onSelectCell(cell.id);
-                    onAddBlock(cell.id, block);
-                  }}
-                  onResizeStart={(e) => handleResizeStart(e, cell.id)}
-                  onResizeMove={handleResizeMove}
-                  onResizeEnd={handleResizeEnd}
-                  onScrollResize={(colDelta, rowDelta) => {
-                    const effective = getEffectiveCell(cell);
-                    const newColSpan = Math.max(
-                      1,
-                      Math.min(grid.cols - effective.colStart + 1, effective.colSpan + colDelta),
-                    );
-                    const newRowSpan = Math.max(
-                      1,
-                      Math.min(grid.rows - effective.rowStart + 1, effective.rowSpan + rowDelta),
-                    );
-                    onUpdateCell(cell.id, { colSpan: newColSpan, rowSpan: newRowSpan });
-                  }}
-                />
-              ))}
+              {cells.map((cell, index) => {
+                let hudLabel: string | undefined;
+                if (resizeState?.cellId === cell.id) {
+                  hudLabel = `${resizeState.currentColSpan}×${resizeState.currentRowSpan}`;
+                } else if (activeDragId === cell.id && dragPreview) {
+                  hudLabel = `${dragPreview.colSpan}×${dragPreview.rowSpan}`;
+                }
+                return (
+                  <BentoCell
+                    key={cell.id}
+                    cell={getEffectiveCell(cell)}
+                    index={index}
+                    isSelected={selectedCellId === cell.id}
+                    isDraggingActive={activeDragId === cell.id}
+                    hudLabel={hudLabel}
+                    onClick={() =>
+                      onSelectCell(selectedCellId === cell.id ? null : cell.id)
+                    }
+                    onDelete={() => onDeleteCell(cell.id)}
+                    onAddBlock={(block) => {
+                      onSelectCell(cell.id);
+                      onAddBlock(cell.id, block);
+                    }}
+                    onResizeStart={(e) => handleResizeStart(e, cell.id)}
+                    onResizeMove={handleResizeMove}
+                    onResizeEnd={handleResizeEnd}
+                    onScrollResize={(colDelta, rowDelta) => {
+                      const effective = getEffectiveCell(cell);
+                      const newColSpan = Math.max(
+                        1,
+                        Math.min(grid.cols - effective.colStart + 1, effective.colSpan + colDelta),
+                      );
+                      const newRowSpan = Math.max(
+                        1,
+                        Math.min(grid.rows - effective.rowStart + 1, effective.rowSpan + rowDelta),
+                      );
+                      onUpdateCell(cell.id, { colSpan: newColSpan, rowSpan: newRowSpan });
+                    }}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -514,7 +523,11 @@ export function BentoGrid({
       {/* Drag overlay — floats at cursor during drag */}
       <DragOverlay dropAnimation={null}>
         {activeDragCell ? (
-          <BentoCellOverlay cell={activeDragCell} index={activeDragIndex} />
+          <BentoCellOverlay
+            cell={activeDragCell}
+            index={activeDragIndex}
+            hudLabel={dragPreview ? `${dragPreview.colSpan}×${dragPreview.rowSpan}` : undefined}
+          />
         ) : null}
       </DragOverlay>
     </DndContext>

@@ -170,6 +170,7 @@ interface BentoCellProps {
   onResizeEnd: (e: React.PointerEvent) => void;
   onScrollResize?: (colDelta: number, rowDelta: number) => void;
   onAddBlock?: (block: ContentBlock) => void;
+  hudLabel?: string;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -186,6 +187,7 @@ export function BentoCell({
   onResizeEnd,
   onScrollResize,
   onAddBlock,
+  hudLabel,
 }: BentoCellProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: cell.id,
@@ -396,6 +398,16 @@ export function BentoCell({
         </div>
       )}
 
+      {/* HUD badge — shown during drag/resize */}
+      {hudLabel ? (
+        <div
+          className="pointer-events-none absolute bottom-2 right-2 z-30 rounded-md bg-black/70 px-1.5 py-0.5 font-mono text-[10px] text-white/90 backdrop-blur-sm"
+          aria-hidden="true"
+        >
+          {hudLabel}
+        </div>
+      ) : null}
+
       {/* Resize handle — bottom-right */}
       <div
         onPointerDown={(e) => {
@@ -439,9 +451,11 @@ export function BentoCell({
 export function BentoCellOverlay({
   cell,
   index,
+  hudLabel,
 }: {
   cell: BentoCellType;
   index: number;
+  hudLabel?: string;
 }) {
   const label = cell.label || `Cell ${index + 1}`;
   const radiusClass = RADIUS_CLASSES[cell.borderRadius ?? "2xl"];
@@ -486,6 +500,14 @@ export function BentoCellOverlay({
       <span className="relative z-[1] font-mono text-[10px] text-white/20" aria-hidden="true">
         {cell.colSpan}×{cell.rowSpan}
       </span>
+      {hudLabel ? (
+        <div
+          className="pointer-events-none absolute bottom-2 right-2 z-30 rounded-md bg-black/70 px-1.5 py-0.5 font-mono text-[10px] text-white/90 backdrop-blur-sm"
+          aria-hidden="true"
+        >
+          {hudLabel}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -355,9 +355,11 @@ const QUICK_COLORS: { name: string; hex: string }[] = [
 function ColorPicker({
   value,
   onChange,
+  recentColors,
 }: {
   value: string;
   onChange: (hex: string) => void;
+  recentColors?: string[];
 }) {
   const [hexInput, setHexInput] = useState(value);
 
@@ -377,6 +379,36 @@ function ColorPicker({
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Recent colors row */}
+      {recentColors && recentColors.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-medium text-muted/60 uppercase tracking-wider">Recent</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {recentColors.map((hex) => {
+              const active = hex.toLowerCase() === value.toLowerCase();
+              return (
+                <Tooltip key={hex} content={hex} side="bottom">
+                  <button
+                    type="button"
+                    onClick={() => onChange(hex)}
+                    aria-label={`Set to recent color ${hex}`}
+                    aria-pressed={active}
+                    style={{ backgroundColor: hex }}
+                    className={[
+                      "relative h-6 w-6 rounded-md border-2 transition-[border-color,transform] duration-150",
+                      "hover:scale-110 active:scale-95",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+                      active
+                        ? "border-accent-hi ring-1 ring-accent/60"
+                        : "border-rim hover:border-white/30",
+                    ].join(" ")}
+                  />
+                </Tooltip>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center gap-1.5">
         {QUICK_COLORS.map(({ name, hex }) => {
           const active = hex.toLowerCase() === value.toLowerCase();
@@ -971,6 +1003,10 @@ interface CellControlsProps {
   onSetBgImage: (src: string | null) => void;
   onDuplicateCell: () => void;
   canDuplicate: boolean;
+  onCopyStyle: () => void;
+  onPasteStyle: () => void;
+  hasStyleClipboard: boolean;
+  recentColors?: string[];
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -988,8 +1024,32 @@ export function CellControls({
   onSetBgImage,
   onDuplicateCell,
   canDuplicate,
+  onCopyStyle,
+  onPasteStyle,
+  hasStyleClipboard,
+  recentColors,
 }: CellControlsProps) {
   const otherCells = cells.filter((c) => c.id !== cell.id);
+
+  // Feature 1: two-click confirm for delete
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const confirmDeleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (confirmDeleteTimerRef.current) clearTimeout(confirmDeleteTimerRef.current);
+    };
+  }, []);
+
+  function handleDeleteClick() {
+    if (confirmDelete) {
+      if (confirmDeleteTimerRef.current) clearTimeout(confirmDeleteTimerRef.current);
+      setConfirmDelete(false);
+      onDelete();
+    } else {
+      setConfirmDelete(true);
+      confirmDeleteTimerRef.current = setTimeout(() => setConfirmDelete(false), 2000);
+    }
+  }
 
   function wouldOverlap(updates: Partial<BentoCell>): boolean {
     const proposed = { ...cell, ...updates };
@@ -1148,7 +1208,43 @@ export function CellControls({
           <ColorPicker
             value={cell.bgColor ?? DEFAULT_CELL_BG}
             onChange={(hex) => onUpdate({ bgColor: hex })}
+            recentColors={recentColors}
           />
+        </div>
+
+        {/* Copy / Paste style */}
+        <div className="flex gap-1.5">
+          <Tooltip content="Copy visual style (color, corners, background)" side="top">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onCopyStyle}
+              aria-label="Copy cell style"
+              className="flex-1 gap-1.5 text-xs border-accent/20 text-muted hover:bg-accent/10 hover:text-cream hover:border-accent/40"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+              </svg>
+              Copy Style
+            </Button>
+          </Tooltip>
+          {hasStyleClipboard ? (
+            <Tooltip content="Paste copied visual style onto this cell" side="top">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onPasteStyle}
+                aria-label="Paste cell style"
+                className="flex-1 gap-1.5 text-xs border-accent/40 text-accent-hi hover:bg-accent/15 hover:border-accent/60"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Paste Style
+              </Button>
+            </Tooltip>
+          ) : null}
         </div>
 
         <Divider />
@@ -1237,14 +1333,24 @@ export function CellControls({
         <Button
           variant="ghost"
           size="sm"
-          onClick={onDelete}
-          aria-label={`Delete ${cell.label || "this cell"} (Delete key)`}
-          className="flex-1 gap-2 text-xs bg-danger/5 text-danger hover:bg-danger/15 hover:text-danger"
+          onClick={handleDeleteClick}
+          aria-label={confirmDelete ? "Confirm delete cell" : `Delete ${cell.label || "this cell"} (Delete key)`}
+          className={
+            confirmDelete
+              ? "flex-1 gap-2 text-xs bg-red-600 text-white hover:bg-red-700 hover:text-white"
+              : "flex-1 gap-2 text-xs bg-danger/5 text-danger hover:bg-danger/15 hover:text-danger"
+          }
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-          Delete
+          {confirmDelete ? (
+            "Are you sure?"
+          ) : (
+            <>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Delete
+            </>
+          )}
         </Button>
       </div>
     </section>

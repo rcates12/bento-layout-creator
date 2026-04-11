@@ -6,7 +6,7 @@
 
 ## Current Milestone
 
-**Milestone 2 — Interactions + Design Identity** (COMPLETE)
+**Milestone 3 — Plan A: Polish & UX** (COMPLETE)
 
 | Task                                                         | Status |
 |--------------------------------------------------------------|--------|
@@ -32,10 +32,24 @@
 
 ---
 
+| Task                                                         | Status |
+|--------------------------------------------------------------|--------|
+| Two-click confirm for Reset (header) and Delete (sidebar)    | Done   |
+| Two-key confirm for Delete/Backspace keyboard shortcut       | Done   |
+| Copy / Paste cell style (bgColor, bgImage, borderRadius)     | Done   |
+| Arrow-key cell navigation (←/→/↑/↓)                         | Done   |
+| Live span HUD badge during drag & resize                     | Done   |
+| Recently used colors row in color picker (session-only)      | Done   |
+| `findAdjacentCell` helper in `lib/bento/utils.ts`            | Done   |
+| `npm run build` passes (0 errors, 0 warnings)                | Done   |
+
+---
+
 ## Previous Milestones
 
 - Milestone 0 — Repository created (COMPLETE)
 - Milestone 1 — Scaffold + Core Builder (COMPLETE)
+- Milestone 2 — Interactions + Design Identity (COMPLETE)
 
 ---
 
@@ -70,7 +84,8 @@ src/
       types.ts          — BentoConfig, GridConfig, BentoCell (+ bgColor)
       generator.ts      — generateCode(config): string (pure, no React)
       utils.ts          — clampCell, findNextPosition, hasOverlap,
-                          getEmptyPositions, generateId, GAP_PX
+                          getEmptyPositions, generateId, GAP_PX,
+                          findAdjacentCell
       theme.ts          — EARTH_TONES palette, DEFAULT_CELL_BG, INITIAL_CELL_COLORS
       gridCollision.ts  — pointerToGridPosition(pointer, gridRect, grid, gapPx)
 docs/
