@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-04-11 — Plan B: Content & Styling
+
+### StatBlock added to ContentBlock union (not a separate field)
+**Rationale:** Treating `stat` as a content block (vs. a standalone cell property) keeps it composable with other blocks, reuses the existing block-list sortable DnD infrastructure, and makes generator output consistent with text/image/button blocks. The block approach allows multiple stat values per cell in the future without a type change.
+
+### Cell `shadow` reuses existing `ShadowLevel` type
+**Rationale:** `ShadowLevel` (`none|sm|md|lg|xl`) is already defined for `ImageBlock.shadow`. Reusing it for cells avoids inventing a parallel type that differs only in the `xl` option. The UI offers `none/sm/md/lg` as the most common options; `xl` is accessible if set programmatically.
+
+### `pt-7` always applied in content area regardless of `padding` setting
+**Rationale:** The drag handle strip at the top of each cell is 28px tall (`h-7`). The content padding is applied to all sides, then `pt-7` overrides the top to ensure content is never obscured by the drag handle. This means `padding: none` results in `p-0 pt-7` (no horizontal/bottom padding, but 28px top clearance).
+
+### `bgGradient` overrides `bgColor` (not an either/or)
+**Rationale:** Both fields coexist on `BentoCell`. When `bgGradient` is set, it takes precedence over `bgColor` in the preview and generator output. The `bgColor` remains stored so toggling the gradient off restores the original solid color without data loss. The solid color picker is visually dimmed (opacity-40) when gradient is active.
+
+### Animation keyframes embedded in standalone HTML output (conditionally)
+**Rationale:** The standalone HTML export includes Tailwind CDN but Tailwind does not provide `@keyframes` for custom bento animations. We conditionally embed a compact `<style>` block with the four keyframe definitions only when at least one cell uses a non-`none` animation. This keeps the output self-contained without bloating it when animations are not used.
+
+### Cell border uses inline style, not Tailwind border utilities
+**Rationale:** The `borderWidth` field is a numeric pixel value (0–4) and `borderColor` is a hex string — both are dynamic user values that cannot be statically purged by Tailwind. Inline `border: Npx solid #hex` is the correct approach for both the preview and the generator output (HTML `style=""` attribute / JSX `style={{}}` prop). When `borderWidth` is 0/undefined, the default `border border-white/[0.07]` Tailwind class is used instead.
+
+---
+
 ## 2026-03-07 — Phase 2 Interactions + Design
 
 ### DndContext lives in BentoGrid (not BentoEditor)

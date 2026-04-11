@@ -34,6 +34,7 @@ import {
   Paintbrush,
   LayoutGrid,
   Layers,
+  TrendingUp,
 } from "lucide-react";
 import { HexColorPicker } from "react-colorful";
 import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
@@ -46,11 +47,14 @@ import type {
   TextBlock,
   ImageBlock,
   ButtonBlock,
+  StatBlock,
   FontSize,
   FontWeight,
   LetterSpacing,
   LineHeight,
   TextAlign,
+  GradientConfig,
+  CellAnimation,
 } from "@/lib/bento/types";
 import { EARTH_TONES, DEFAULT_CELL_BG, PLACEHOLDER_IMAGE } from "@/lib/bento/theme";
 import { hasOverlap } from "@/lib/bento/utils";
@@ -800,12 +804,76 @@ function ButtonBlockEditor({
   );
 }
 
+function StatBlockEditor({
+  block,
+  onUpdate,
+}: {
+  block: StatBlock;
+  onUpdate: (updates: Partial<StatBlock>) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <SectionLabel>Value</SectionLabel>
+        <MiniInput
+          value={block.value}
+          placeholder="e.g. 42K"
+          onChange={(v) => onUpdate({ value: v })}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <SectionLabel>Label</SectionLabel>
+        <MiniInput
+          value={block.label ?? ""}
+          placeholder="e.g. Monthly Users"
+          onChange={(v) => onUpdate({ label: v })}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-x-3">
+        <ControlRow label="Prefix">
+          <MiniInput
+            value={block.prefix ?? ""}
+            placeholder="$"
+            onChange={(v) => onUpdate({ prefix: v })}
+          />
+        </ControlRow>
+        <ControlRow label="Suffix">
+          <MiniInput
+            value={block.suffix ?? ""}
+            placeholder="%"
+            onChange={(v) => onUpdate({ suffix: v })}
+          />
+        </ControlRow>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <SectionLabel>Value color</SectionLabel>
+        <ColorPicker
+          value={block.valueColor ?? "#ffffff"}
+          onChange={(v) => onUpdate({ valueColor: v })}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <SectionLabel>Label color</SectionLabel>
+        <ColorPicker
+          value={block.labelColor ?? "#888888"}
+          onChange={(v) => onUpdate({ labelColor: v })}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ─── Block card ───────────────────────────────────────────────────────────────
 
 const BLOCK_TYPE_META = {
   text:   { icon: Type,             label: "Text",   color: "text-blue-400" },
   image:  { icon: ImageIcon,        label: "Image",  color: "text-emerald-400" },
   button: { icon: MousePointerClick, label: "Button", color: "text-amber-400" },
+  stat:   { icon: TrendingUp,        label: "Stat",   color: "text-violet-400" },
 };
 
 interface BlockCardProps {
@@ -892,6 +960,9 @@ function BlockCard({
           )}
           {block.type === "button" && (
             <ButtonBlockEditor block={block} onUpdate={(u) => onUpdate(u as Partial<ButtonBlock>)} />
+          )}
+          {block.type === "stat" && (
+            <StatBlockEditor block={block} onUpdate={(u) => onUpdate(u as Partial<StatBlock>)} />
           )}
         </div>
       )}
@@ -1017,6 +1088,8 @@ export function CellControls({
       onAddBlock({ id: generateId(), type: "image", src: PLACEHOLDER_IMAGE, fit: "cover" });
     } else if (type === "button") {
       onAddBlock({ id: generateId(), type: "button", label: "Click me", variant: "solid", size: "md" });
+    } else if (type === "stat") {
+      onAddBlock({ id: generateId(), type: "stat", value: "42K", label: "Label" });
     }
   }
 
@@ -1054,7 +1127,7 @@ export function CellControls({
 
       {/* ── Content ── */}
       <CollapsibleSection icon={Layers} title="Content" defaultOpen>
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           <AddBlockButton
             icon={Type}
             label="Text"
@@ -1075,6 +1148,13 @@ export function CellControls({
             color="text-amber-400"
             tintClass="border-amber-500/20 bg-amber-500/5 text-muted hover:bg-amber-500/15 hover:text-cream hover:border-amber-500/30"
             onClick={() => handleAddBlock("button")}
+          />
+          <AddBlockButton
+            icon={TrendingUp}
+            label="Stat"
+            color="text-violet-400"
+            tintClass="border-violet-500/20 bg-violet-500/5 text-muted hover:bg-violet-500/15 hover:text-cream hover:border-violet-500/30"
+            onClick={() => handleAddBlock("stat")}
           />
         </div>
 
@@ -1143,12 +1223,73 @@ export function CellControls({
         )}
 
         {/* Color */}
-        <div className="flex flex-col gap-1.5">
+        <div className={`flex flex-col gap-1.5 ${cell.bgGradient ? "opacity-40" : ""}`}>
           <SectionLabel>Color</SectionLabel>
           <ColorPicker
             value={cell.bgColor ?? DEFAULT_CELL_BG}
             onChange={(hex) => onUpdate({ bgColor: hex })}
           />
+        </div>
+
+        {/* Gradient toggle + controls */}
+        <div className="flex flex-col gap-2">
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={!!cell.bgGradient}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  const grad: GradientConfig = {
+                    type: "linear",
+                    angle: 135,
+                    stops: [cell.bgColor ?? DEFAULT_CELL_BG, "#1e1b4b"],
+                  };
+                  onUpdate({ bgGradient: grad });
+                } else {
+                  onUpdate({ bgGradient: undefined });
+                }
+              }}
+              className="h-3.5 w-3.5 rounded border-rim accent-accent"
+            />
+            <span className="text-xs text-muted">Use gradient</span>
+          </label>
+
+          {cell.bgGradient && (
+            <div className="flex flex-col gap-2 rounded-md border border-rim/60 bg-surface/50 p-2">
+              <div className="flex flex-col gap-1.5">
+                <SectionLabel>Start color</SectionLabel>
+                <ColorPicker
+                  value={cell.bgGradient.stops[0]}
+                  onChange={(hex) => onUpdate({ bgGradient: { ...cell.bgGradient!, stops: [hex, cell.bgGradient!.stops[1]] } })}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <SectionLabel>End color</SectionLabel>
+                <ColorPicker
+                  value={cell.bgGradient.stops[1]}
+                  onChange={(hex) => onUpdate({ bgGradient: { ...cell.bgGradient!, stops: [cell.bgGradient!.stops[0], hex] } })}
+                />
+              </div>
+              <ControlRow label="Angle">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={360}
+                    value={cell.bgGradient.angle}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      if (!isNaN(v) && v >= 0 && v <= 360) {
+                        onUpdate({ bgGradient: { ...cell.bgGradient!, angle: v } });
+                      }
+                    }}
+                    className="h-7 w-16 rounded border border-rim bg-surface-hi px-2 text-xs tabular-nums text-cream focus:outline-none focus:ring-1 focus:ring-accent/50"
+                  />
+                  <span className="text-xs text-muted">°</span>
+                </div>
+              </ControlRow>
+            </div>
+          )}
         </div>
 
         <Divider />
@@ -1159,6 +1300,84 @@ export function CellControls({
           <RadiusPicker
             value={cell.borderRadius ?? "2xl"}
             onChange={(v) => onUpdate({ borderRadius: v })}
+          />
+        </div>
+
+        <Divider />
+
+        {/* Border */}
+        <div className="flex flex-col gap-1.5">
+          <SectionLabel>Border</SectionLabel>
+          <BorderWidthPicker
+            value={String(cell.borderWidth ?? 0)}
+            onChange={(v) => onUpdate({ borderWidth: Number(v) })}
+          />
+          {(cell.borderWidth ?? 0) > 0 && (
+            <div className="flex flex-col gap-1 pt-1">
+              <SectionLabel>Border Color</SectionLabel>
+              <ColorPicker
+                value={cell.borderColor ?? "#ffffff"}
+                onChange={(v) => onUpdate({ borderColor: v })}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Shadow */}
+        <div className="flex flex-col gap-1">
+          <SectionLabel>Shadow</SectionLabel>
+          <ShadowPicker
+            value={cell.shadow ?? "none"}
+            onChange={(v) => onUpdate({ shadow: v })}
+          />
+        </div>
+
+        <Divider />
+
+        {/* Padding */}
+        <div className="flex flex-col gap-1">
+          <SectionLabel>Padding</SectionLabel>
+          <PillToggle
+            value={cell.padding ?? "md"}
+            options={[
+              { value: "none", label: "None" },
+              { value: "sm",   label: "SM" },
+              { value: "md",   label: "MD" },
+              { value: "lg",   label: "LG" },
+            ]}
+            onChange={(v) => onUpdate({ padding: v as BentoCell["padding"] })}
+          />
+        </div>
+
+        {/* Content alignment */}
+        <div className="flex flex-col gap-1">
+          <SectionLabel>Content align</SectionLabel>
+          <PillToggle
+            value={cell.contentAlign ?? "start"}
+            options={[
+              { value: "start",  label: "Top" },
+              { value: "center", label: "Center" },
+              { value: "end",    label: "Bottom" },
+            ]}
+            onChange={(v) => onUpdate({ contentAlign: v as BentoCell["contentAlign"] })}
+          />
+        </div>
+
+        <Divider />
+
+        {/* Entrance animation */}
+        <div className="flex flex-col gap-1">
+          <SectionLabel>Entrance animation</SectionLabel>
+          <PillToggle
+            value={cell.animation ?? "none"}
+            options={[
+              { value: "none",        label: "None" },
+              { value: "fade-in",     label: "Fade" },
+              { value: "slide-up",    label: "Up" },
+              { value: "slide-right", label: "Right" },
+              { value: "pop",         label: "Pop" },
+            ]}
+            onChange={(v) => onUpdate({ animation: v as CellAnimation })}
           />
         </div>
       </CollapsibleSection>

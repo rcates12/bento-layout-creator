@@ -6,6 +6,37 @@
 
 ## Current Milestone
 
+**Milestone 3 — Plan B: Content & Styling** (COMPLETE)
+
+| Task                                                         | Status |
+|--------------------------------------------------------------|--------|
+| `GradientConfig` type + `bgGradient` on `BentoCell`         | Done   |
+| Gradient toggle + color pickers + angle input in CellControls| Done   |
+| Gradient preview in BentoCell + BentoCellOverlay             | Done   |
+| Gradient output in generator (HTML + JSX)                    | Done   |
+| `borderWidth`, `borderColor`, `shadow` on `BentoCell`       | Done   |
+| Border/shadow controls in CellControls (reuse existing pickers)| Done |
+| Border/shadow preview in BentoCell + BentoCellOverlay        | Done   |
+| Border/shadow output in generator                            | Done   |
+| `StatBlock` type + added to `ContentBlock` union             | Done   |
+| `RenderStatBlock` in BentoCell + quick-add bar icon          | Done   |
+| `StatBlockEditor` in CellControls + BLOCK_TYPE_META entry    | Done   |
+| Stat block HTML/JSX renderers in generator                   | Done   |
+| `padding` + `contentAlign` on `BentoCell`                   | Done   |
+| Padding/align pill-toggle controls in CellControls           | Done   |
+| Dynamic padding + alignment in BentoCell + overlay           | Done   |
+| Dynamic padding/align in generator `cellClasses()`          | Done   |
+| `CellAnimation` type + `animation` on `BentoCell`           | Done   |
+| Four `@keyframes` + animation classes in `globals.css`       | Done   |
+| Animation class applied in BentoCell preview                 | Done   |
+| Animation pill-toggle selector in CellControls               | Done   |
+| Animation class emitted in generator; keyframes in standalone| Done   |
+| `npm run build` passes (0 errors, 0 warnings)               | Done   |
+
+---
+
+## Previous Milestones
+
 **Milestone 2 — Interactions + Design Identity** (COMPLETE)
 
 | Task                                                         | Status |
@@ -67,7 +98,9 @@ src/
       CodeOutput.tsx    — syntax-highlighted output + copy-to-clipboard
   lib/
     bento/
-      types.ts          — BentoConfig, GridConfig, BentoCell (+ bgColor)
+      types.ts          — BentoConfig, GridConfig, BentoCell (+ bgGradient, borderWidth, borderColor,
+                          shadow, padding, contentAlign, animation); GradientConfig, CellAnimation,
+                          StatBlock types; StatBlock added to ContentBlock union
       generator.ts      — generateCode(config): string (pure, no React)
       utils.ts          — clampCell, findNextPosition, hasOverlap,
                           getEmptyPositions, generateId, GAP_PX
@@ -95,7 +128,7 @@ docs/
 - `grid-rows-{n}` not in Tailwind v4 defaults beyond 6 — users may need to extend their config for rows > 6 in generated code
 - Drag activation requires 6px pointer movement — intentional to avoid accidental drags on click
 
-## Next Up (Milestone 3 — Phase 3 Content)
+## Next Up (Milestone 4)
 
 1. Per-cell rich content: heading, body text, button
 2. Per-cell background image (URL input)
