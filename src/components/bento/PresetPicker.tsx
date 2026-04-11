@@ -3,12 +3,18 @@
 import { useState, useRef, useEffect } from "react";
 import { LayoutTemplate, X } from "lucide-react";
 import { PRESETS } from "@/lib/bento/presets";
+import type { BentoPreset } from "@/lib/bento/presets";
 import type { BentoConfig, BentoCell } from "@/lib/bento/types";
+import { generateId } from "@/lib/bento/utils";
 import { Button } from "@/components/ui/button";
 
 interface PresetPickerProps {
   onApplyPreset: (config: BentoConfig) => void;
   onFillRegular: () => void;
+  customPresets?: BentoPreset[];
+  currentConfig?: BentoConfig;
+  onSavePreset?: (preset: BentoPreset) => void;
+  onDeleteCustomPreset?: (id: string) => void;
 }
 
 // ─── SVG Wireframe Thumbnail ──────────────────────────────────────────────────
@@ -76,9 +82,20 @@ function PresetThumbnail({
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function PresetPicker({ onApplyPreset, onFillRegular }: PresetPickerProps) {
+export function PresetPicker({
+  onApplyPreset,
+  onFillRegular,
+  customPresets = [],
+  currentConfig,
+  onSavePreset,
+  onDeleteCustomPreset,
+}: PresetPickerProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Save-as-preset inline form state
+  const [showSaveForm, setShowSaveForm] = useState(false);
+  const [saveName, setSaveName] = useState("");
 
   // Dismiss on outside click
   useEffect(() => {
@@ -111,6 +128,18 @@ export function PresetPicker({ onApplyPreset, onFillRegular }: PresetPickerProps
     setOpen(false);
   }
 
+  function handleSavePreset() {
+    if (!saveName.trim() || !currentConfig || !onSavePreset) return;
+    onSavePreset({
+      id: `custom-${generateId()}`,
+      name: saveName.trim(),
+      description: "Custom preset",
+      config: currentConfig,
+    });
+    setSaveName("");
+    setShowSaveForm(false);
+  }
+
   return (
     <div ref={containerRef} className="relative">
       {/* ── Trigger ──────────────────────────────────────────────────────── */}
@@ -133,7 +162,7 @@ export function PresetPicker({ onApplyPreset, onFillRegular }: PresetPickerProps
           role="dialog"
           aria-label="Layout presets"
           className="absolute right-0 top-[calc(100%+8px)] z-50 flex w-[280px] flex-col overflow-hidden rounded-xl border border-rim bg-surface shadow-2xl shadow-black/60"
-          style={{ maxHeight: 360 }}
+          style={{ maxHeight: 480 }}
         >
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between border-b border-rim px-4 py-2.5">
@@ -150,30 +179,127 @@ export function PresetPicker({ onApplyPreset, onFillRegular }: PresetPickerProps
             </button>
           </div>
 
-          {/* Scrollable grid */}
-          <div className="grid grid-cols-2 gap-2 overflow-y-auto p-3">
-            {PRESETS.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                aria-label={`Apply ${preset.name} preset: ${preset.description}`}
-                onClick={() => applyAndClose(preset)}
-                className="group flex flex-col gap-2 rounded-lg border border-rim/40 bg-canvas p-2 text-muted/40 transition-all duration-150 hover:border-rim-hi hover:text-muted/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rim-hi active:scale-[0.97]"
-              >
-                {/* Thumbnail */}
-                <div
-                  className="relative w-full overflow-hidden rounded"
-                  style={{ aspectRatio: "3 / 2" }}
-                >
-                  <PresetThumbnail config={preset.config} isRegular={preset.isRegular} />
+          {/* Save as preset button / form */}
+          {onSavePreset && (
+            <div className="shrink-0 border-b border-rim/50 px-3 py-2.5">
+              {showSaveForm ? (
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    value={saveName}
+                    onChange={(e) => setSaveName(e.target.value)}
+                    placeholder="Preset name…"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSavePreset();
+                      if (e.key === "Escape") { setShowSaveForm(false); setSaveName(""); }
+                    }}
+                    className="min-w-0 flex-1 rounded-md border border-rim bg-canvas px-2 py-1 text-xs text-cream placeholder:text-muted/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                    aria-label="New preset name"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSavePreset}
+                    disabled={!saveName.trim()}
+                    className="rounded-md bg-accent px-2.5 py-1 text-[11px] font-semibold text-canvas disabled:opacity-40 hover:bg-accent/90"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowSaveForm(false); setSaveName(""); }}
+                    aria-label="Cancel save"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-muted/50 hover:bg-hover hover:text-cream/80"
+                  >
+                    <X size={11} aria-hidden="true" />
+                  </button>
                 </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowSaveForm(true)}
+                  className="w-full rounded-md border border-dashed border-rim/50 py-1.5 text-[11px] font-medium text-muted/60 transition-colors hover:border-rim-hi hover:text-cream/70"
+                >
+                  + Save current layout as preset…
+                </button>
+              )}
+            </div>
+          )}
 
-                {/* Label */}
-                <span className="w-full truncate text-center text-[10px] font-medium text-muted transition-colors group-hover:text-cream/70">
-                  {preset.name}
+          <div className="overflow-y-auto">
+            {/* My Presets section */}
+            {customPresets.length > 0 && (
+              <>
+                <div className="px-3 pb-1 pt-2.5">
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted/50">
+                    My Presets
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 px-3 pb-2">
+                  {customPresets.map((preset) => (
+                    <div key={preset.id} className="relative">
+                      <button
+                        type="button"
+                        aria-label={`Apply custom preset: ${preset.name}`}
+                        onClick={() => { onApplyPreset(preset.config); setOpen(false); }}
+                        className="group flex w-full flex-col gap-2 rounded-lg border border-rim/40 bg-canvas p-2 text-muted/40 transition-all duration-150 hover:border-rim-hi hover:text-muted/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rim-hi active:scale-[0.97]"
+                      >
+                        <div className="relative w-full overflow-hidden rounded" style={{ aspectRatio: "3 / 2" }}>
+                          <PresetThumbnail config={preset.config} />
+                        </div>
+                        <span className="w-full truncate text-center text-[10px] font-medium text-muted transition-colors group-hover:text-cream/70">
+                          {preset.name}
+                        </span>
+                      </button>
+                      {onDeleteCustomPreset && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onDeleteCustomPreset(preset.id); }}
+                          aria-label={`Delete custom preset ${preset.name}`}
+                          className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded bg-black/40 text-white/40 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-900/60 hover:text-white"
+                        >
+                          <X size={8} aria-hidden="true" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="mx-3 mb-1 h-px bg-rim/50" aria-hidden="true" />
+              </>
+            )}
+
+            {/* Built-in presets */}
+            {customPresets.length > 0 && (
+              <div className="px-3 pb-1 pt-2">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted/50">
+                  Built-in
                 </span>
-              </button>
-            ))}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-2 p-3">
+              {PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  aria-label={`Apply ${preset.name} preset: ${preset.description}`}
+                  onClick={() => applyAndClose(preset)}
+                  className="group flex flex-col gap-2 rounded-lg border border-rim/40 bg-canvas p-2 text-muted/40 transition-all duration-150 hover:border-rim-hi hover:text-muted/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rim-hi active:scale-[0.97]"
+                >
+                  {/* Thumbnail */}
+                  <div
+                    className="relative w-full overflow-hidden rounded"
+                    style={{ aspectRatio: "3 / 2" }}
+                  >
+                    <PresetThumbnail config={preset.config} isRegular={preset.isRegular} />
+                  </div>
+
+                  {/* Label */}
+                  <span className="w-full truncate text-center text-[10px] font-medium text-muted transition-colors group-hover:text-cream/70">
+                    {preset.name}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
