@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Undo2, Redo2, HelpCircle, Code2, X, Menu, RotateCcw, PanelLeftOpen } from "lucide-react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { Undo2, Redo2, HelpCircle, Code2, X, Menu, RotateCcw, PanelLeftOpen, Share2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "./Tooltip";
 import type { BentoConfig, BentoCell, GridConfig, ContentBlock } from "@/lib/bento/types";
@@ -11,9 +11,14 @@ import {
   generateId,
   clampCell,
   hasOverlap,
+  findAdjacentCell,
+  encodeConfig,
+  decodeConfig,
 } from "@/lib/bento/utils";
 import { INITIAL_CELL_COLORS, EARTH_TONES } from "@/lib/bento/theme";
 import { useHistoryReducer } from "@/lib/bento/useHistoryReducer";
+import { loadCustomPresets, saveCustomPresets } from "@/lib/bento/presets";
+import type { BentoPreset } from "@/lib/bento/presets";
 import { GridControls } from "./GridControls";
 import { BentoGrid } from "./BentoGrid";
 import { CellControls } from "./CellControls";
@@ -52,6 +57,16 @@ function migrateCell(raw: any): BentoCell {
 
 function loadFromStorage(): BentoState | null {
   if (typeof window === "undefined") return null;
+
+  // URL hash takes priority over localStorage
+  const hash = window.location.hash;
+  if (hash.startsWith("#config=")) {
+    const decoded = decodeConfig(hash.slice("#config=".length));
+    if (decoded?.grid?.cols && Array.isArray(decoded?.cells)) {
+      return { config: decoded, selectedCellId: null, selectedCellIds: [] };
+    }
+  }
+
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
@@ -64,7 +79,7 @@ function loadFromStorage(): BentoState | null {
             ...parsed.config,
             cells: parsed.config.cells.map(migrateCell),
           };
-          return { config, selectedCellId: null };
+          return { config, selectedCellId: null, selectedCellIds: [] };
         }
       }
       return null;
@@ -75,7 +90,7 @@ function loadFromStorage(): BentoState | null {
       parsed?.config?.grid?.cols &&
       Array.isArray(parsed?.config?.cells)
     ) {
-      return { config: parsed.config, selectedCellId: null };
+      return { config: parsed.config, selectedCellId: null, selectedCellIds: [] };
     }
   } catch {
     // ignore corrupt data
@@ -97,9 +112,11 @@ function saveToStorage(config: BentoConfig): void {
 interface BentoState {
   config: BentoConfig;
   selectedCellId: string | null;
+  selectedCellIds: string[];
 }
 
 const INITIAL_STATE: BentoState = {
+  selectedCellIds: [],
   config: {
     grid: { cols: 4, rows: 3, gap: 4 },
     cells: [
@@ -172,7 +189,11 @@ type BentoAction =
   | { type: "REORDER_BLOCK"; payload: { cellId: string; blockId: string; direction: "up" | "down" } }
   | { type: "REORDER_BLOCKS_FULL"; payload: { cellId: string; blockIds: string[] } }
   | { type: "SET_BG_IMAGE"; payload: { cellId: string; src: string | null } }
-  | { type: "DUPLICATE_CELL"; payload: string };
+  | { type: "DUPLICATE_CELL"; payload: string }
+  | { type: "SELECT_MULTI_CELL"; payload: string }
+  | { type: "CLEAR_MULTI_SELECT" }
+  | { type: "BULK_DELETE_CELLS" }
+  | { type: "BULK_SET_BG_COLOR"; payload: string };
 
 function bentoReducer(state: BentoState, action: BentoAction): BentoState {
   switch (action.type) {
@@ -219,6 +240,7 @@ function bentoReducer(state: BentoState, action: BentoAction): BentoState {
         ...state,
         config: { grid: newGrid, cells: placed },
         selectedCellId: placedIds.has(state.selectedCellId ?? "") ? state.selectedCellId : null,
+        selectedCellIds: state.selectedCellIds.filter((id) => placedIds.has(id)),
       };
     }
 
@@ -347,6 +369,7 @@ function bentoReducer(state: BentoState, action: BentoAction): BentoState {
           state.selectedCellId === action.payload
             ? null
             : state.selectedCellId,
+        selectedCellIds: state.selectedCellIds.filter((id) => id !== action.payload),
       };
     }
 
@@ -358,6 +381,7 @@ function bentoReducer(state: BentoState, action: BentoAction): BentoState {
       return {
         config: action.payload,
         selectedCellId: null,
+        selectedCellIds: [],
       };
     }
 
@@ -379,7 +403,7 @@ function bentoReducer(state: BentoState, action: BentoAction): BentoState {
           });
         }
       }
-      return { ...state, config: { ...state.config, cells }, selectedCellId: null };
+      return { ...state, config: { ...state.config, cells }, selectedCellId: null, selectedCellIds: [] };
     }
 
     case "RESET": {
@@ -508,6 +532,47 @@ function bentoReducer(state: BentoState, action: BentoAction): BentoState {
       };
     }
 
+    case "SELECT_MULTI_CELL": {
+      const id = action.payload;
+      const already = state.selectedCellIds.includes(id);
+      return {
+        ...state,
+        selectedCellIds: already
+          ? state.selectedCellIds.filter((x) => x !== id)
+          : [...state.selectedCellIds, id],
+      };
+    }
+
+    case "CLEAR_MULTI_SELECT": {
+      return { ...state, selectedCellIds: [] };
+    }
+
+    case "BULK_DELETE_CELLS": {
+      const toDelete = new Set(state.selectedCellIds);
+      return {
+        ...state,
+        config: {
+          ...state.config,
+          cells: state.config.cells.filter((c) => !toDelete.has(c.id)),
+        },
+        selectedCellId: toDelete.has(state.selectedCellId ?? "") ? null : state.selectedCellId,
+        selectedCellIds: [],
+      };
+    }
+
+    case "BULK_SET_BG_COLOR": {
+      const ids = new Set(state.selectedCellIds);
+      return {
+        ...state,
+        config: {
+          ...state.config,
+          cells: state.config.cells.map((c) =>
+            ids.has(c.id) ? { ...c, bgColor: action.payload } : c,
+          ),
+        },
+      };
+    }
+
     default:
       return state;
   }
@@ -523,7 +588,7 @@ export function BentoEditor() {
     loadFromStorage,
   );
 
-  const { config, selectedCellId } = state;
+  const { config, selectedCellId, selectedCellIds } = state;
   const selectedCell =
     config.cells.find((c) => c.id === selectedCellId) ?? null;
   const canAddCell = findNextPosition(config) !== null;
@@ -532,8 +597,39 @@ export function BentoEditor() {
   const [colHoverDelta, setColHoverDelta] = useState<1 | -1 | null>(null);
   const [rowHoverDelta, setRowHoverDelta] = useState<1 | -1 | null>(null);
 
+  // Feature 1: Reset confirm
+  const [confirmReset, setConfirmReset] = useState(false);
+  const confirmResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Feature 1: Keyboard delete confirm (ref only — no visual state needed)
+  const confirmDeleteKbdRef = useRef(false);
+  const confirmDeleteKbdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Feature 2: Style clipboard
+  const styleClipboardRef = useRef<Partial<BentoCell>>({});
+  const [hasStyleClipboard, setHasStyleClipboard] = useState(false);
+
+  // Feature 5: Recent colors (up to 6, session-only)
+  const recentColorsRef = useRef<string[]>([]);
+
   // Export panel visibility
   const [showExport, setShowExport] = useState(false);
+
+  // Share URL feedback
+  const [shareCopied, setShareCopied] = useState(false);
+
+  // Import JSON modal state
+  const [showImport, setShowImport] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importError, setImportError] = useState<string | null>(null);
+
+  // Grid ref for PNG export (passed to BentoGrid + CodeOutput)
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  // Custom presets (Feature 3)
+  const [customPresets, setCustomPresets] = useState<BentoPreset[]>(
+    () => typeof window !== "undefined" ? loadCustomPresets() : [],
+  );
 
   // Sidebar visibility (overlay drawer on tablet, always open on desktop)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -547,10 +643,61 @@ export function BentoEditor() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
+  // Cleanup confirm timers on unmount
+  useEffect(() => {
+    return () => {
+      if (confirmResetTimerRef.current) clearTimeout(confirmResetTimerRef.current);
+      if (confirmDeleteKbdTimerRef.current) clearTimeout(confirmDeleteKbdTimerRef.current);
+    };
+  }, []);
+
   // Persist config to localStorage whenever it changes
   useEffect(() => {
     saveToStorage(config);
   }, [config]);
+
+  // Sync config to URL hash (debounced 300ms, no history entry)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const encoded = encodeConfig(config);
+      history.replaceState(null, "", `#config=${encoded}`);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [config]);
+
+  // Share: copy current URL to clipboard
+  const handleShare = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+    } catch {
+      const el = document.createElement("textarea");
+      el.value = window.location.href;
+      el.style.cssText = "position:fixed;opacity:0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
+  }, []);
+
+  // JSON Import handler
+  const handleImport = useCallback(() => {
+    setImportError(null);
+    try {
+      const parsed = JSON.parse(importText);
+      if (!parsed?.grid?.cols || !Array.isArray(parsed?.cells)) {
+        setImportError("Invalid layout: must have grid and cells fields.");
+        return;
+      }
+      dispatch({ type: "LOAD_PRESET", payload: parsed as BentoConfig });
+      setShowImport(false);
+      setImportText("");
+    } catch {
+      setImportError("Invalid JSON — please check for syntax errors.");
+    }
+  }, [importText, dispatch]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -584,27 +731,63 @@ export function BentoEditor() {
         }
       }
 
-      // Cell shortcuts only when a cell is selected and focus is not in a text field
-      if (selectedCellId && !inInput) {
-        if (e.key === "Delete" || e.key === "Backspace") {
-          e.preventDefault();
-          dispatch({ type: "REMOVE_CELL", payload: selectedCellId });
-          return;
+      // Cell shortcuts (when no text input is focused)
+      if (!inInput) {
+        if (selectedCellIds.length > 1) {
+          if (e.key === "Delete" || e.key === "Backspace") {
+            e.preventDefault();
+            dispatch({ type: "BULK_DELETE_CELLS" });
+            return;
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            dispatch({ type: "CLEAR_MULTI_SELECT" });
+            return;
+          }
+        } else if (selectedCellId) {
+          if (e.key === "Delete" || e.key === "Backspace") {
+            e.preventDefault();
+            if (confirmDeleteKbdRef.current) {
+              if (confirmDeleteKbdTimerRef.current) clearTimeout(confirmDeleteKbdTimerRef.current);
+              confirmDeleteKbdRef.current = false;
+              dispatch({ type: "REMOVE_CELL", payload: selectedCellId });
+            } else {
+              confirmDeleteKbdRef.current = true;
+              confirmDeleteKbdTimerRef.current = setTimeout(() => {
+                confirmDeleteKbdRef.current = false;
+              }, 2000);
+            }
+            return;
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            dispatch({ type: "SELECT_CELL", payload: null });
+            return;
+          }
         }
-        if (e.key === "Escape") {
+        // Arrow keys — navigate to adjacent cell
+        if (selectedCellId && (e.key === "ArrowRight" || e.key === "ArrowLeft" || e.key === "ArrowDown" || e.key === "ArrowUp")) {
           e.preventDefault();
-          dispatch({ type: "SELECT_CELL", payload: null });
+          const dirMap: Record<string, "right" | "left" | "down" | "up"> = {
+            ArrowRight: "right",
+            ArrowLeft: "left",
+            ArrowDown: "down",
+            ArrowUp: "up",
+          };
+          const nextId = findAdjacentCell(config.cells, selectedCellId, dirMap[e.key]);
+          if (nextId) dispatch({ type: "SELECT_CELL", payload: nextId });
           return;
         }
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo, selectedCellId, dispatch]);
+  }, [undo, redo, selectedCellId, selectedCellIds, dispatch, config.cells]);
 
   const generatedHTML = useMemo(() => generateCode(config), [config]);
   const generatedStandalone = useMemo(() => generateStandaloneHTML(config), [config]);
   const generatedJSX = useMemo(() => generateReactJSX(config), [config]);
+  const generatedJSON = useMemo(() => JSON.stringify(config, null, 2), [config]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-canvas">
@@ -653,6 +836,18 @@ export function BentoEditor() {
               dispatch({ type: "LOAD_PRESET", payload: presetConfig })
             }
             onFillRegular={() => dispatch({ type: "FILL_REGULAR" })}
+            customPresets={customPresets}
+            currentConfig={config}
+            onSavePreset={(preset) => {
+              const next = [...customPresets, preset];
+              setCustomPresets(next);
+              saveCustomPresets(next);
+            }}
+            onDeleteCustomPreset={(id) => {
+              const next = customPresets.filter((p) => p.id !== id);
+              setCustomPresets(next);
+              saveCustomPresets(next);
+            }}
           />
 
           {/* Help */}
@@ -709,6 +904,36 @@ export function BentoEditor() {
             </Tooltip>
           </div>
 
+          {/* Share button */}
+          <Tooltip content="Copy shareable URL to clipboard" side="bottom">
+            <button
+              type="button"
+              onClick={handleShare}
+              aria-label="Copy shareable layout URL to clipboard"
+              className="flex h-8 items-center gap-1.5 rounded-lg border border-rim/60 bg-surface-hi px-3 text-xs font-medium text-muted transition-colors hover:bg-hover/60 hover:text-cream/90"
+            >
+              {shareCopied ? (
+                <Check size={14} aria-hidden="true" className="text-green-400" />
+              ) : (
+                <Share2 size={14} aria-hidden="true" />
+              )}
+              <span className="hidden lg:inline">{shareCopied ? "Copied!" : "Share"}</span>
+            </button>
+          </Tooltip>
+
+          {/* Import JSON button */}
+          <Tooltip content="Import layout from JSON" side="bottom">
+            <button
+              type="button"
+              onClick={() => { setShowImport(true); setImportError(null); setImportText(""); }}
+              aria-label="Import layout from JSON"
+              className="flex h-8 items-center gap-1.5 rounded-lg border border-rim/60 bg-surface-hi px-3 text-xs font-medium text-muted transition-colors hover:bg-hover/60 hover:text-cream/90"
+            >
+              <span className="hidden lg:inline">Import</span>
+              <span className="lg:hidden text-[11px]">↑</span>
+            </button>
+          </Tooltip>
+
           {/* Export panel toggle */}
           <Tooltip content="Toggle export panel (Ctrl+E)" side="bottom">
             <button
@@ -732,12 +957,31 @@ export function BentoEditor() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => dispatch({ type: "RESET" })}
-            aria-label="Reset layout to default"
-            className="h-8 border-0 bg-[#696969] text-xs font-bold text-[#000000] hover:bg-[#575757]"
+            onClick={() => {
+              if (confirmReset) {
+                if (confirmResetTimerRef.current) clearTimeout(confirmResetTimerRef.current);
+                setConfirmReset(false);
+                dispatch({ type: "RESET" });
+              } else {
+                setConfirmReset(true);
+                confirmResetTimerRef.current = setTimeout(() => setConfirmReset(false), 2000);
+              }
+            }}
+            aria-label={confirmReset ? "Confirm reset layout" : "Reset layout to default"}
+            className={
+              confirmReset
+                ? "h-8 border-0 bg-red-600 text-xs font-bold text-white hover:bg-red-700"
+                : "h-8 border-0 bg-[#696969] text-xs font-bold text-[#000000] hover:bg-[#575757]"
+            }
           >
-            <RotateCcw size={13} className="lg:hidden" aria-hidden="true" />
-            <span className="hidden lg:inline">Reset</span>
+            {confirmReset ? (
+              "Sure?"
+            ) : (
+              <>
+                <RotateCcw size={13} className="lg:hidden" aria-hidden="true" />
+                <span className="hidden lg:inline">Reset</span>
+              </>
+            )}
           </Button>
         </div>
       </header>
@@ -802,12 +1046,16 @@ export function BentoEditor() {
                 cell={selectedCell}
                 grid={config.grid}
                 cells={config.cells}
-                onUpdate={(updates) =>
+                onUpdate={(updates) => {
+                  if (updates.bgColor) {
+                    const hex = updates.bgColor;
+                    recentColorsRef.current = [hex, ...recentColorsRef.current.filter((c) => c !== hex)].slice(0, 6);
+                  }
                   dispatch({
                     type: "UPDATE_CELL",
                     payload: { id: selectedCell.id, updates },
-                  })
-                }
+                  });
+                }}
                 onDelete={() =>
                   dispatch({ type: "REMOVE_CELL", payload: selectedCell.id })
                 }
@@ -830,6 +1078,24 @@ export function BentoEditor() {
                   dispatch({ type: "DUPLICATE_CELL", payload: selectedCell.id })
                 }
                 canDuplicate={canAddCell}
+                onCopyStyle={() => {
+                  styleClipboardRef.current = {
+                    bgColor: selectedCell.bgColor,
+                    bgImage: selectedCell.bgImage,
+                    borderRadius: selectedCell.borderRadius,
+                  };
+                  setHasStyleClipboard(true);
+                }}
+                onPasteStyle={() => {
+                  if (Object.keys(styleClipboardRef.current).length > 0) {
+                    dispatch({
+                      type: "UPDATE_CELL",
+                      payload: { id: selectedCell.id, updates: styleClipboardRef.current },
+                    });
+                  }
+                }}
+                hasStyleClipboard={hasStyleClipboard}
+                recentColors={recentColorsRef.current}
               />
             ) : (
               <div className="flex flex-col gap-2">
@@ -876,13 +1142,51 @@ export function BentoEditor() {
                 </span>
               </button>
             )}
+            {/* Bulk action bar — shown when 2+ cells are multi-selected */}
+            {selectedCellIds.length > 1 && (
+              <div className="mb-3 flex shrink-0 items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
+                <span className="text-xs font-semibold text-amber-300">{selectedCellIds.length} cells selected</span>
+                <div className="flex-1" />
+                <label className="flex items-center gap-1.5 text-xs text-amber-300/80">
+                  <span>Color:</span>
+                  <input
+                    type="color"
+                    defaultValue="#1e1b4b"
+                    onChange={(e) => dispatch({ type: "BULK_SET_BG_COLOR", payload: e.target.value })}
+                    className="h-6 w-10 cursor-pointer rounded border-0 bg-transparent p-0"
+                    aria-label="Bulk background color"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => dispatch({ type: "BULK_DELETE_CELLS" })}
+                  className="rounded-lg border border-red-500/40 bg-red-500/15 px-2.5 py-1 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/25"
+                >
+                  Delete all
+                </button>
+                <button
+                  type="button"
+                  onClick={() => dispatch({ type: "CLEAR_MULTI_SELECT" })}
+                  aria-label="Clear multi-selection"
+                  className="flex h-6 w-6 items-center justify-center rounded-md text-amber-300/60 transition-colors hover:bg-amber-500/15 hover:text-amber-300"
+                >
+                  <X size={13} aria-hidden="true" />
+                </button>
+              </div>
+            )}
+
             <BentoGrid
               config={config}
               selectedCellId={selectedCellId}
+              selectedCellIds={selectedCellIds}
               colHoverDelta={colHoverDelta}
               rowHoverDelta={rowHoverDelta}
+              gridRef={gridRef}
               onSelectCell={(id) =>
                 dispatch({ type: "SELECT_CELL", payload: id })
+              }
+              onMultiSelectCell={(id) =>
+                dispatch({ type: "SELECT_MULTI_CELL", payload: id })
               }
               onAddCell={() => dispatch({ type: "ADD_CELL" })}
               onAddCellAt={(col, row) =>
@@ -907,6 +1211,58 @@ export function BentoEditor() {
               canAddCell={canAddCell}
             />
           </div>
+
+          {/* Import JSON modal */}
+          {showImport && (
+            <div
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+              onClick={(e) => { if (e.target === e.currentTarget) setShowImport(false); }}
+            >
+              <div className="w-full max-w-lg rounded-xl border border-rim bg-surface shadow-2xl shadow-black/60">
+                <div className="flex items-center justify-between border-b border-rim px-4 py-3">
+                  <span className="text-sm font-semibold text-cream">Import JSON</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowImport(false)}
+                    aria-label="Close import dialog"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-hover/60 hover:text-cream/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                  >
+                    <X size={15} aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="flex flex-col gap-3 p-4">
+                  <p className="text-xs text-muted">Paste a Lintel JSON config below. This will replace your current layout.</p>
+                  <textarea
+                    value={importText}
+                    onChange={(e) => setImportText(e.target.value)}
+                    placeholder={'{\n  "grid": { "cols": 4, "rows": 3, "gap": 4 },\n  "cells": [...]\n}'}
+                    rows={8}
+                    className="w-full resize-y rounded-lg border border-rim bg-canvas px-3 py-2 font-mono text-xs text-cream placeholder:text-muted/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                    aria-label="JSON input"
+                  />
+                  {importError && (
+                    <StatusBanner variant="error" aria-live="assertive">{importError}</StatusBanner>
+                  )}
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowImport(false)}
+                      className="rounded-lg border border-rim/60 bg-surface-hi px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-hover/60 hover:text-cream/90"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleImport}
+                      className="rounded-lg border-0 bg-accent px-3 py-1.5 text-xs font-semibold text-canvas transition-colors hover:bg-accent/90"
+                    >
+                      Import
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Dim backdrop — sits between canvas and export panel */}
           <div
@@ -952,6 +1308,8 @@ export function BentoEditor() {
                 htmlCode={generatedHTML}
                 standaloneCode={generatedStandalone}
                 jsxCode={generatedJSX}
+                jsonCode={generatedJSON}
+                gridRef={gridRef}
                 panelMode
               />
             </div>

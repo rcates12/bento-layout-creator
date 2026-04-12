@@ -1,18 +1,19 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Code2, Copy, Check } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
+import { Code2, Copy, Check, Download, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 
 // ─── Tab types ────────────────────────────────────────────────────────────────
 
-type ExportTab = "html" | "standalone" | "jsx";
+type ExportTab = "html" | "standalone" | "jsx" | "json";
 
 const TABS: { id: ExportTab; label: string; description: string }[] = [
   { id: "html",       label: "Tailwind HTML",  description: "Grid classes with inline background styles" },
   { id: "standalone", label: "Standalone HTML", description: "Complete HTML file with Tailwind CDN" },
   { id: "jsx",        label: "React JSX",       description: "Functional component with className props" },
+  { id: "json",       label: "JSON",            description: "Raw layout config — import back into Lintel" },
 ];
 
 // ─── Tokenizer ────────────────────────────────────────────────────────────────
@@ -113,18 +114,26 @@ interface CodeOutputProps {
   htmlCode: string;
   standaloneCode: string;
   jsxCode: string;
+  jsonCode?: string;
+  gridRef?: React.RefObject<HTMLDivElement | null>;
   /** When true, strips outer border/rounding and merges copy button into the tabs row */
   panelMode?: boolean;
 }
 
-export function CodeOutput({ htmlCode, standaloneCode, jsxCode, panelMode = false }: CodeOutputProps) {
+type PixelRatio = 1 | 2 | 3;
+
+export function CodeOutput({ htmlCode, standaloneCode, jsxCode, jsonCode, gridRef, panelMode = false }: CodeOutputProps) {
   const [activeTab, setActiveTab] = useState<ExportTab>("html");
   const [copied, setCopied] = useState(false);
+  const [pngExporting, setPngExporting] = useState(false);
+  const [pixelRatio, setPixelRatio] = useState<PixelRatio>(2);
+  const exportingRef = useRef(false);
 
   const code =
     activeTab === "html"       ? htmlCode       :
     activeTab === "standalone" ? standaloneCode :
-    jsxCode;
+    activeTab === "jsx"        ? jsxCode        :
+    (jsonCode ?? "{}");
 
   const handleCopy = useCallback(async () => {
     try {
@@ -143,7 +152,26 @@ export function CodeOutput({ htmlCode, standaloneCode, jsxCode, panelMode = fals
     setTimeout(() => setCopied(false), 2000);
   }, [code]);
 
-  const tokens = tokenize(code);
+  const handleDownloadPng = useCallback(async () => {
+    if (!gridRef?.current || exportingRef.current) return;
+    exportingRef.current = true;
+    setPngExporting(true);
+    try {
+      const htmlToImage = await import("html-to-image");
+      const dataUrl = await htmlToImage.toPng(gridRef.current, { pixelRatio });
+      const link = document.createElement("a");
+      link.download = `lintel-layout-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("PNG export failed:", err);
+    } finally {
+      setPngExporting(false);
+      exportingRef.current = false;
+    }
+  }, [gridRef, pixelRatio]);
+
+  const tokens = activeTab !== "json" ? tokenize(code) : null;
   const activeTabInfo = TABS.find((t) => t.id === activeTab)!;
 
   const copyButton = (
@@ -233,20 +261,64 @@ export function CodeOutput({ htmlCode, standaloneCode, jsxCode, panelMode = fals
           aria-label={`${activeTabInfo.label} code output`}
         >
           <code>
-            {tokens.map((token, i) => (
-              <span key={i} className={TOKEN_COLORS[token.type] ?? ""}>
-                {token.value}
-              </span>
-            ))}
+            {tokens ? (
+              tokens.map((token, i) => (
+                <span key={i} className={TOKEN_COLORS[token.type] ?? ""}>
+                  {token.value}
+                </span>
+              ))
+            ) : (
+              <span className="text-zinc-300">{code}</span>
+            )}
           </code>
         </pre>
       </div>
 
       {/* Copy footer — below the code block in panel mode, inline in standalone */}
       {panelMode ? (
-        <div className="shrink-0 border-t border-zinc-800 px-4 py-3 flex items-center justify-between">
-          <span className="text-xs text-zinc-500">{activeTabInfo.description}</span>
-          {copyButton}
+        <div className="shrink-0 border-t border-zinc-800 px-4 py-3 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-zinc-500">{activeTabInfo.description}</span>
+            {copyButton}
+          </div>
+
+          {/* PNG export controls — only shown when gridRef is available */}
+          {gridRef && (
+            <div className="flex items-center gap-2 border-t border-zinc-800/60 pt-2.5">
+              <ImageIcon size={13} className="text-zinc-500 shrink-0" aria-hidden="true" />
+              <span className="text-xs text-zinc-500 shrink-0">PNG export:</span>
+              {/* Pixel ratio selector */}
+              <div className="flex overflow-hidden rounded-md border border-zinc-700 text-[11px] font-medium">
+                {([1, 2, 3] as PixelRatio[]).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setPixelRatio(r)}
+                    aria-pressed={pixelRatio === r}
+                    className={[
+                      "px-2 py-1 transition-colors",
+                      pixelRatio === r
+                        ? "bg-zinc-600 text-zinc-100"
+                        : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200",
+                    ].join(" ")}
+                  >
+                    {r}×
+                  </button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadPng}
+                disabled={pngExporting}
+                className="ml-auto border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 disabled:opacity-50"
+                aria-label="Download grid as PNG image"
+              >
+                <Download size={13} aria-hidden="true" />
+                {pngExporting ? "Exporting…" : "Download PNG"}
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         /* standalone mode copy button already rendered in the header above */

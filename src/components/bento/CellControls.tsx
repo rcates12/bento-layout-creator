@@ -1,8 +1,6 @@
 "use client";
 
-"use client";
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -34,6 +32,7 @@ import {
   Paintbrush,
   LayoutGrid,
   Layers,
+  TrendingUp,
 } from "lucide-react";
 import { HexColorPicker } from "react-colorful";
 import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
@@ -46,11 +45,14 @@ import type {
   TextBlock,
   ImageBlock,
   ButtonBlock,
+  StatBlock,
   FontSize,
   FontWeight,
   LetterSpacing,
   LineHeight,
   TextAlign,
+  GradientConfig,
+  CellAnimation,
 } from "@/lib/bento/types";
 import { EARTH_TONES, DEFAULT_CELL_BG, PLACEHOLDER_IMAGE } from "@/lib/bento/theme";
 import { hasOverlap } from "@/lib/bento/utils";
@@ -355,9 +357,11 @@ const QUICK_COLORS: { name: string; hex: string }[] = [
 function ColorPicker({
   value,
   onChange,
+  recentColors,
 }: {
   value: string;
   onChange: (hex: string) => void;
+  recentColors?: string[];
 }) {
   const [hexInput, setHexInput] = useState(value);
 
@@ -377,6 +381,36 @@ function ColorPicker({
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Recent colors row */}
+      {recentColors && recentColors.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-medium text-muted/60 uppercase tracking-wider">Recent</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {recentColors.map((hex) => {
+              const active = hex.toLowerCase() === value.toLowerCase();
+              return (
+                <Tooltip key={hex} content={hex} side="bottom">
+                  <button
+                    type="button"
+                    onClick={() => onChange(hex)}
+                    aria-label={`Set to recent color ${hex}`}
+                    aria-pressed={active}
+                    style={{ backgroundColor: hex }}
+                    className={[
+                      "relative h-6 w-6 rounded-md border-2 transition-[border-color,transform] duration-150",
+                      "hover:scale-110 active:scale-95",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+                      active
+                        ? "border-accent-hi ring-1 ring-accent/60"
+                        : "border-rim hover:border-white/30",
+                    ].join(" ")}
+                  />
+                </Tooltip>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center gap-1.5">
         {QUICK_COLORS.map(({ name, hex }) => {
           const active = hex.toLowerCase() === value.toLowerCase();
@@ -800,12 +834,76 @@ function ButtonBlockEditor({
   );
 }
 
+function StatBlockEditor({
+  block,
+  onUpdate,
+}: {
+  block: StatBlock;
+  onUpdate: (updates: Partial<StatBlock>) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <SectionLabel>Value</SectionLabel>
+        <MiniInput
+          value={block.value}
+          placeholder="e.g. 42K"
+          onChange={(v) => onUpdate({ value: v })}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <SectionLabel>Label</SectionLabel>
+        <MiniInput
+          value={block.label ?? ""}
+          placeholder="e.g. Monthly Users"
+          onChange={(v) => onUpdate({ label: v })}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-x-3">
+        <ControlRow label="Prefix">
+          <MiniInput
+            value={block.prefix ?? ""}
+            placeholder="$"
+            onChange={(v) => onUpdate({ prefix: v })}
+          />
+        </ControlRow>
+        <ControlRow label="Suffix">
+          <MiniInput
+            value={block.suffix ?? ""}
+            placeholder="%"
+            onChange={(v) => onUpdate({ suffix: v })}
+          />
+        </ControlRow>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <SectionLabel>Value color</SectionLabel>
+        <ColorPicker
+          value={block.valueColor ?? "#ffffff"}
+          onChange={(v) => onUpdate({ valueColor: v })}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <SectionLabel>Label color</SectionLabel>
+        <ColorPicker
+          value={block.labelColor ?? "#888888"}
+          onChange={(v) => onUpdate({ labelColor: v })}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ─── Block card ───────────────────────────────────────────────────────────────
 
 const BLOCK_TYPE_META = {
   text:   { icon: Type,             label: "Text",   color: "text-blue-400" },
   image:  { icon: ImageIcon,        label: "Image",  color: "text-emerald-400" },
   button: { icon: MousePointerClick, label: "Button", color: "text-amber-400" },
+  stat:   { icon: TrendingUp,        label: "Stat",   color: "text-violet-400" },
 };
 
 interface BlockCardProps {
@@ -893,6 +991,9 @@ function BlockCard({
           {block.type === "button" && (
             <ButtonBlockEditor block={block} onUpdate={(u) => onUpdate(u as Partial<ButtonBlock>)} />
           )}
+          {block.type === "stat" && (
+            <StatBlockEditor block={block} onUpdate={(u) => onUpdate(u as Partial<StatBlock>)} />
+          )}
         </div>
       )}
     </div>
@@ -971,6 +1072,10 @@ interface CellControlsProps {
   onSetBgImage: (src: string | null) => void;
   onDuplicateCell: () => void;
   canDuplicate: boolean;
+  onCopyStyle: () => void;
+  onPasteStyle: () => void;
+  hasStyleClipboard: boolean;
+  recentColors?: string[];
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -988,8 +1093,32 @@ export function CellControls({
   onSetBgImage,
   onDuplicateCell,
   canDuplicate,
+  onCopyStyle,
+  onPasteStyle,
+  hasStyleClipboard,
+  recentColors,
 }: CellControlsProps) {
   const otherCells = cells.filter((c) => c.id !== cell.id);
+
+  // Feature 1: two-click confirm for delete
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const confirmDeleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (confirmDeleteTimerRef.current) clearTimeout(confirmDeleteTimerRef.current);
+    };
+  }, []);
+
+  function handleDeleteClick() {
+    if (confirmDelete) {
+      if (confirmDeleteTimerRef.current) clearTimeout(confirmDeleteTimerRef.current);
+      setConfirmDelete(false);
+      onDelete();
+    } else {
+      setConfirmDelete(true);
+      confirmDeleteTimerRef.current = setTimeout(() => setConfirmDelete(false), 2000);
+    }
+  }
 
   function wouldOverlap(updates: Partial<BentoCell>): boolean {
     const proposed = { ...cell, ...updates };
@@ -1017,6 +1146,8 @@ export function CellControls({
       onAddBlock({ id: generateId(), type: "image", src: PLACEHOLDER_IMAGE, fit: "cover" });
     } else if (type === "button") {
       onAddBlock({ id: generateId(), type: "button", label: "Click me", variant: "solid", size: "md" });
+    } else if (type === "stat") {
+      onAddBlock({ id: generateId(), type: "stat", value: "42K", label: "Label" });
     }
   }
 
@@ -1054,7 +1185,7 @@ export function CellControls({
 
       {/* ── Content ── */}
       <CollapsibleSection icon={Layers} title="Content" defaultOpen>
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           <AddBlockButton
             icon={Type}
             label="Text"
@@ -1075,6 +1206,13 @@ export function CellControls({
             color="text-amber-400"
             tintClass="border-amber-500/20 bg-amber-500/5 text-muted hover:bg-amber-500/15 hover:text-cream hover:border-amber-500/30"
             onClick={() => handleAddBlock("button")}
+          />
+          <AddBlockButton
+            icon={TrendingUp}
+            label="Stat"
+            color="text-violet-400"
+            tintClass="border-violet-500/20 bg-violet-500/5 text-muted hover:bg-violet-500/15 hover:text-cream hover:border-violet-500/30"
+            onClick={() => handleAddBlock("stat")}
           />
         </div>
 
@@ -1143,12 +1281,109 @@ export function CellControls({
         )}
 
         {/* Color */}
-        <div className="flex flex-col gap-1.5">
+        <div className={`flex flex-col gap-1.5 ${cell.bgGradient ? "opacity-40" : ""}`}>
           <SectionLabel>Color</SectionLabel>
           <ColorPicker
             value={cell.bgColor ?? DEFAULT_CELL_BG}
             onChange={(hex) => onUpdate({ bgColor: hex })}
+            recentColors={recentColors}
           />
+        </div>
+
+        {/* Gradient toggle + controls */}
+        <div className="flex flex-col gap-2">
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={!!cell.bgGradient}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  const grad: GradientConfig = {
+                    type: "linear",
+                    angle: 135,
+                    stops: [cell.bgColor ?? DEFAULT_CELL_BG, "#1e1b4b"],
+                  };
+                  onUpdate({ bgGradient: grad });
+                } else {
+                  onUpdate({ bgGradient: undefined });
+                }
+              }}
+              className="h-3.5 w-3.5 rounded border-rim accent-accent"
+            />
+            <span className="text-xs text-muted">Use gradient</span>
+          </label>
+
+          {cell.bgGradient && (
+            <div className="flex flex-col gap-2 rounded-md border border-rim/60 bg-surface/50 p-2">
+              <div className="flex flex-col gap-1.5">
+                <SectionLabel>Start color</SectionLabel>
+                <ColorPicker
+                  value={cell.bgGradient.stops[0]}
+                  onChange={(hex) => onUpdate({ bgGradient: { ...cell.bgGradient!, stops: [hex, cell.bgGradient!.stops[1]] } })}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <SectionLabel>End color</SectionLabel>
+                <ColorPicker
+                  value={cell.bgGradient.stops[1]}
+                  onChange={(hex) => onUpdate({ bgGradient: { ...cell.bgGradient!, stops: [cell.bgGradient!.stops[0], hex] } })}
+                />
+              </div>
+              <ControlRow label="Angle">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={360}
+                    value={cell.bgGradient.angle}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      if (!isNaN(v) && v >= 0 && v <= 360) {
+                        onUpdate({ bgGradient: { ...cell.bgGradient!, angle: v } });
+                      }
+                    }}
+                    className="h-7 w-16 rounded border border-rim bg-surface-hi px-2 text-xs tabular-nums text-cream focus:outline-none focus:ring-1 focus:ring-accent/50"
+                  />
+                  <span className="text-xs text-muted">°</span>
+                </div>
+              </ControlRow>
+            </div>
+          )}
+        </div>
+
+        {/* Copy / Paste style */}
+        <div className="flex gap-1.5">
+          <Tooltip content="Copy visual style (color, corners, background)" side="top">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onCopyStyle}
+              aria-label="Copy cell style"
+              className="flex-1 gap-1.5 text-xs border-accent/20 text-muted hover:bg-accent/10 hover:text-cream hover:border-accent/40"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+              </svg>
+              Copy Style
+            </Button>
+          </Tooltip>
+          {hasStyleClipboard ? (
+            <Tooltip content="Paste copied visual style onto this cell" side="top">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onPasteStyle}
+                aria-label="Paste cell style"
+                className="flex-1 gap-1.5 text-xs border-accent/40 text-accent-hi hover:bg-accent/15 hover:border-accent/60"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Paste Style
+              </Button>
+            </Tooltip>
+          ) : null}
         </div>
 
         <Divider />
@@ -1159,6 +1394,84 @@ export function CellControls({
           <RadiusPicker
             value={cell.borderRadius ?? "2xl"}
             onChange={(v) => onUpdate({ borderRadius: v })}
+          />
+        </div>
+
+        <Divider />
+
+        {/* Border */}
+        <div className="flex flex-col gap-1.5">
+          <SectionLabel>Border</SectionLabel>
+          <BorderWidthPicker
+            value={String(cell.borderWidth ?? 0)}
+            onChange={(v) => onUpdate({ borderWidth: Number(v) })}
+          />
+          {(cell.borderWidth ?? 0) > 0 && (
+            <div className="flex flex-col gap-1 pt-1">
+              <SectionLabel>Border Color</SectionLabel>
+              <ColorPicker
+                value={cell.borderColor ?? "#ffffff"}
+                onChange={(v) => onUpdate({ borderColor: v })}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Shadow */}
+        <div className="flex flex-col gap-1">
+          <SectionLabel>Shadow</SectionLabel>
+          <ShadowPicker
+            value={cell.shadow ?? "none"}
+            onChange={(v) => onUpdate({ shadow: v })}
+          />
+        </div>
+
+        <Divider />
+
+        {/* Padding */}
+        <div className="flex flex-col gap-1">
+          <SectionLabel>Padding</SectionLabel>
+          <PillToggle
+            value={cell.padding ?? "md"}
+            options={[
+              { value: "none", label: "None" },
+              { value: "sm",   label: "SM" },
+              { value: "md",   label: "MD" },
+              { value: "lg",   label: "LG" },
+            ]}
+            onChange={(v) => onUpdate({ padding: v as BentoCell["padding"] })}
+          />
+        </div>
+
+        {/* Content alignment */}
+        <div className="flex flex-col gap-1">
+          <SectionLabel>Content align</SectionLabel>
+          <PillToggle
+            value={cell.contentAlign ?? "start"}
+            options={[
+              { value: "start",  label: "Top" },
+              { value: "center", label: "Center" },
+              { value: "end",    label: "Bottom" },
+            ]}
+            onChange={(v) => onUpdate({ contentAlign: v as BentoCell["contentAlign"] })}
+          />
+        </div>
+
+        <Divider />
+
+        {/* Entrance animation */}
+        <div className="flex flex-col gap-1">
+          <SectionLabel>Entrance animation</SectionLabel>
+          <PillToggle
+            value={cell.animation ?? "none"}
+            options={[
+              { value: "none",        label: "None" },
+              { value: "fade-in",     label: "Fade" },
+              { value: "slide-up",    label: "Up" },
+              { value: "slide-right", label: "Right" },
+              { value: "pop",         label: "Pop" },
+            ]}
+            onChange={(v) => onUpdate({ animation: v as CellAnimation })}
           />
         </div>
       </CollapsibleSection>
@@ -1237,14 +1550,24 @@ export function CellControls({
         <Button
           variant="ghost"
           size="sm"
-          onClick={onDelete}
-          aria-label={`Delete ${cell.label || "this cell"} (Delete key)`}
-          className="flex-1 gap-2 text-xs bg-danger/5 text-danger hover:bg-danger/15 hover:text-danger"
+          onClick={handleDeleteClick}
+          aria-label={confirmDelete ? "Confirm delete cell" : `Delete ${cell.label || "this cell"} (Delete key)`}
+          className={
+            confirmDelete
+              ? "flex-1 gap-2 text-xs bg-red-600 text-white hover:bg-red-700 hover:text-white"
+              : "flex-1 gap-2 text-xs bg-danger/5 text-danger hover:bg-danger/15 hover:text-danger"
+          }
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-          Delete
+          {confirmDelete ? (
+            "Are you sure?"
+          ) : (
+            <>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Delete
+            </>
+          )}
         </Button>
       </div>
     </section>

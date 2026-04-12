@@ -5,6 +5,72 @@
 
 ---
 
+## 2026-04-11 — Plan C: Sharing & Productivity
+
+### URL hash sharing: `btoa`/`atob` + `history.replaceState`
+**Rationale:** URL hash sharing uses `btoa`/`atob` + `history.replaceState` — no compression library added to keep bundle size zero; configs are typically small enough. `replaceState` (not `pushState`) avoids polluting the back button history with every keystroke during the debounced 300ms write.
+
+### `html-to-image` for PNG export
+**Rationale:** `html-to-image` added for PNG export — zero transitive dependencies itself, ~15KB gzipped. Chosen over `dom-to-image-more` (outdated, unmaintained) and `html2canvas` (heavier, ~200KB, more browser quirks). Dynamically imported in the click handler so it stays out of the initial bundle.
+
+### Custom presets stored in localStorage (`bento-custom-presets-v1`)
+**Rationale:** Custom presets are user-specific, client-side data — localStorage is the appropriate store (same pattern as the existing layout persistence). Versioned key (`-v1`) allows future schema migrations without corrupting existing data. `BentoPreset` type was already defined in `presets.ts`; storage helpers added to the same file to keep preset logic co-located.
+
+### Multi-select uses parallel `selectedCellIds: string[]` (not replacing `selectedCellId`)
+**Rationale:** `selectedCellId` drives the sidebar's single-cell editor (CellControls). Adding a separate `selectedCellIds` set avoids breaking that flow: shift-clicking builds the multi-select set while normal clicks continue to set `selectedCellId` for the sidebar. The two can coexist — `selectedCellId` is the "sidebar focus", `selectedCellIds` is the "bulk operation set".
+
+### JSON import/export added as 4th tab in CodeOutput
+**Rationale:** Inline with the existing tab pattern — no new panel or modal required. The JSON format is the raw `BentoConfig` object, which can be re-imported via the "Import JSON" button to restore any state precisely. This also makes configs inspectable and version-controllable.
+
+---
+
+## 2026-04-11 — Plan B: Content & Styling
+
+### StatBlock added to ContentBlock union (not a separate field)
+**Rationale:** Treating `stat` as a content block (vs. a standalone cell property) keeps it composable with other blocks, reuses the existing block-list sortable DnD infrastructure, and makes generator output consistent with text/image/button blocks. The block approach allows multiple stat values per cell in the future without a type change.
+
+### Cell `shadow` reuses existing `ShadowLevel` type
+**Rationale:** `ShadowLevel` (`none|sm|md|lg|xl`) is already defined for `ImageBlock.shadow`. Reusing it for cells avoids inventing a parallel type that differs only in the `xl` option. The UI offers `none/sm/md/lg` as the most common options; `xl` is accessible if set programmatically.
+
+### `pt-7` always applied in content area regardless of `padding` setting
+**Rationale:** The drag handle strip at the top of each cell is 28px tall (`h-7`). The content padding is applied to all sides, then `pt-7` overrides the top to ensure content is never obscured by the drag handle. This means `padding: none` results in `p-0 pt-7` (no horizontal/bottom padding, but 28px top clearance).
+
+### `bgGradient` overrides `bgColor` (not an either/or)
+**Rationale:** Both fields coexist on `BentoCell`. When `bgGradient` is set, it takes precedence over `bgColor` in the preview and generator output. The `bgColor` remains stored so toggling the gradient off restores the original solid color without data loss. The solid color picker is visually dimmed (opacity-40) when gradient is active.
+
+### Animation keyframes embedded in standalone HTML output (conditionally)
+**Rationale:** The standalone HTML export includes Tailwind CDN but Tailwind does not provide `@keyframes` for custom bento animations. We conditionally embed a compact `<style>` block with the four keyframe definitions only when at least one cell uses a non-`none` animation. This keeps the output self-contained without bloating it when animations are not used.
+
+### Cell border uses inline style, not Tailwind border utilities
+**Rationale:** The `borderWidth` field is a numeric pixel value (0–4) and `borderColor` is a hex string — both are dynamic user values that cannot be statically purged by Tailwind. Inline `border: Npx solid #hex` is the correct approach for both the preview and the generator output (HTML `style=""` attribute / JSX `style={{}}` prop). When `borderWidth` is 0/undefined, the default `border border-white/[0.07]` Tailwind class is used instead.
+
+---
+
+## 2026-04-11 — Plan A: Polish & UX
+
+### Two-click confirmation uses useState + useRef timer (not useReducer)
+**Rationale:** Confirm state is purely UI-local (not part of BentoState) and auto-resets after 2s. `useState` for the boolean flag (triggers visual re-render) and `useRef` for the timer ID (avoids stale closure in cleanup). No new reducer action types were added.
+
+### Keyboard Delete confirm uses ref only (no visual feedback)
+**Rationale:** There is no UI button to change appearance for keyboard shortcuts. A `useRef<boolean>` tracks whether the first Delete/Backspace keypress already fired, and a `setTimeout` resets it after 2s. No state → no extra re-renders.
+
+### Style clipboard uses useRef + separate hasStyleClipboard useState
+**Rationale:** The clipboard contents (`Partial<BentoCell>`) do not need to trigger re-renders on their own. `useRef` stores the data; a companion `useState<boolean>` (hasStyleClipboard) controls the "Paste Style" button visibility. This follows the Vercel React guideline to use `useRef` for persisted-across-renders non-render-triggering values.
+
+### Style clipboard copies bgColor, bgImage, borderRadius only
+**Rationale:** These are the visual appearance properties present on `BentoCell`. `grain` and `shadow` are not currently fields on `BentoCell` (they live on content blocks). If more visual fields are added, extend the clipboard object accordingly.
+
+### Recent colors uses useRef (session-only, no state)
+**Rationale:** Recent colors mutate in-place and are passed as a prop. Since color changes already cause a state update (via `UPDATE_CELL`), the next render will read the updated ref value. No extra re-renders needed. Not persisted to localStorage (session-only per spec).
+
+### Arrow-key navigation uses colStart/rowStart comparison (not pixel geometry)
+**Rationale:** `findAdjacentCell` compares grid positions (integer colStart/rowStart) rather than pixel bounding boxes. This is simpler, deterministic, and works correctly regardless of cell size. Ties are broken by rowStart proximity (for left/right) or colStart proximity (for up/down).
+
+### HUD badge rendered in BentoCell and BentoCellOverlay
+**Rationale:** BentoGrid computes `hudLabel` and passes it as a prop. BentoCell renders it as an absolutely-positioned pill. BentoCellOverlay also accepts `hudLabel` for display during drag. No animation on the SVG — the badge is a plain div, keeping the render path simple.
+
+---
+
 ## 2026-03-07 — Phase 2 Interactions + Design
 
 ### DndContext lives in BentoGrid (not BentoEditor)

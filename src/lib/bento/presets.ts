@@ -1,5 +1,26 @@
 import type { BentoConfig } from "./types";
 
+// ─── Custom preset storage ────────────────────────────────────────────────────
+
+const CUSTOM_PRESETS_KEY = "bento-custom-presets-v1";
+
+export function loadCustomPresets(): BentoPreset[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_PRESETS_KEY);
+    return raw ? (JSON.parse(raw) as BentoPreset[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomPresets(presets: BentoPreset[]): void {
+  try {
+    localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(presets));
+  } catch {
+    // ignore storage errors
+  }
+}
+
 export interface BentoPreset {
   id: string;
   name: string;

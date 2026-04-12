@@ -1,5 +1,19 @@
 import type { BentoCell, BentoConfig } from "./types";
 
+// ─── URL Sharing ──────────────────────────────────────────────────────────────
+
+export function encodeConfig(config: BentoConfig): string {
+  return btoa(encodeURIComponent(JSON.stringify(config)));
+}
+
+export function decodeConfig(encoded: string): BentoConfig | null {
+  try {
+    return JSON.parse(decodeURIComponent(atob(encoded)));
+  } catch {
+    return null;
+  }
+}
+
 export function isCellOccupied(
   col: number,
   row: number,
@@ -72,6 +86,60 @@ export function clampCell(
 
 export function generateId(): string {
   return `cell-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+export function findAdjacentCell(
+  cells: BentoCell[],
+  selectedId: string,
+  direction: "left" | "right" | "up" | "down",
+): string | null {
+  const selected = cells.find((c) => c.id === selectedId);
+  if (!selected) return null;
+
+  let candidates: BentoCell[];
+
+  switch (direction) {
+    case "right":
+      candidates = cells
+        .filter((c) => c.colStart > selected.colStart)
+        .sort((a, b) =>
+          a.colStart !== b.colStart
+            ? a.colStart - b.colStart
+            : Math.abs(a.rowStart - selected.rowStart) - Math.abs(b.rowStart - selected.rowStart),
+        );
+      break;
+    case "left":
+      candidates = cells
+        .filter((c) => c.colStart < selected.colStart)
+        .sort((a, b) =>
+          a.colStart !== b.colStart
+            ? b.colStart - a.colStart
+            : Math.abs(a.rowStart - selected.rowStart) - Math.abs(b.rowStart - selected.rowStart),
+        );
+      break;
+    case "down":
+      candidates = cells
+        .filter((c) => c.rowStart > selected.rowStart)
+        .sort((a, b) =>
+          a.rowStart !== b.rowStart
+            ? a.rowStart - b.rowStart
+            : Math.abs(a.colStart - selected.colStart) - Math.abs(b.colStart - selected.colStart),
+        );
+      break;
+    case "up":
+      candidates = cells
+        .filter((c) => c.rowStart < selected.rowStart)
+        .sort((a, b) =>
+          a.rowStart !== b.rowStart
+            ? b.rowStart - a.rowStart
+            : Math.abs(a.colStart - selected.colStart) - Math.abs(b.colStart - selected.colStart),
+        );
+      break;
+    default:
+      candidates = [];
+  }
+
+  return candidates[0]?.id ?? null;
 }
 
 export const GAP_PX: Record<number, number> = {
