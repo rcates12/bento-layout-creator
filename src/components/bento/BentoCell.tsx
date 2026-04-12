@@ -215,8 +215,9 @@ interface BentoCellProps {
   cell: BentoCellType;
   index: number;
   isSelected: boolean;
+  isMultiSelected?: boolean;
   isDraggingActive: boolean;
-  onClick: () => void;
+  onClick: (e: React.MouseEvent) => void;
   onDelete: () => void;
   onResizeStart: (e: React.PointerEvent) => void;
   onResizeMove: (e: React.PointerEvent) => void;
@@ -232,6 +233,7 @@ export function BentoCell({
   cell,
   index,
   isSelected,
+  isMultiSelected = false,
   isDraggingActive,
   onClick,
   onDelete,
@@ -290,7 +292,7 @@ export function BentoCell({
     gridRow: `${cell.rowStart} / span ${cell.rowSpan}`,
     backgroundColor: cell.bgGradient ? undefined : (cell.bgColor ?? DEFAULT_CELL_BG),
     opacity: isDragging ? 0.15 : 1,
-    zIndex: isSelected ? 2 : 1,
+    zIndex: isSelected || isMultiSelected ? 2 : 1,
     position: "relative",
   };
 
@@ -336,13 +338,15 @@ export function BentoCell({
         "transition-[border-color,box-shadow] duration-150",
         isSelected
           ? "border-accent ring-2 ring-accent/50 ring-offset-2 ring-offset-canvas"
+          : isMultiSelected
+          ? "border-amber-400/70 ring-2 ring-amber-400/50 ring-offset-2 ring-offset-canvas"
           : hasCustomBorder ? "" : "border-white/[0.07] hover:border-white/[0.16]",
       ].join(" ")}
       onClick={onClick}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onClick();
+          onClick(e as unknown as React.MouseEvent);
         }
       }}
       role="button"

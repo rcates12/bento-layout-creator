@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-04-11 — Plan C: Sharing & Productivity
+
+### URL hash sharing: `btoa`/`atob` + `history.replaceState`
+**Rationale:** URL hash sharing uses `btoa`/`atob` + `history.replaceState` — no compression library added to keep bundle size zero; configs are typically small enough. `replaceState` (not `pushState`) avoids polluting the back button history with every keystroke during the debounced 300ms write.
+
+### `html-to-image` for PNG export
+**Rationale:** `html-to-image` added for PNG export — zero transitive dependencies itself, ~15KB gzipped. Chosen over `dom-to-image-more` (outdated, unmaintained) and `html2canvas` (heavier, ~200KB, more browser quirks). Dynamically imported in the click handler so it stays out of the initial bundle.
+
+### Custom presets stored in localStorage (`bento-custom-presets-v1`)
+**Rationale:** Custom presets are user-specific, client-side data — localStorage is the appropriate store (same pattern as the existing layout persistence). Versioned key (`-v1`) allows future schema migrations without corrupting existing data. `BentoPreset` type was already defined in `presets.ts`; storage helpers added to the same file to keep preset logic co-located.
+
+### Multi-select uses parallel `selectedCellIds: string[]` (not replacing `selectedCellId`)
+**Rationale:** `selectedCellId` drives the sidebar's single-cell editor (CellControls). Adding a separate `selectedCellIds` set avoids breaking that flow: shift-clicking builds the multi-select set while normal clicks continue to set `selectedCellId` for the sidebar. The two can coexist — `selectedCellId` is the "sidebar focus", `selectedCellIds` is the "bulk operation set".
+
+### JSON import/export added as 4th tab in CodeOutput
+**Rationale:** Inline with the existing tab pattern — no new panel or modal required. The JSON format is the raw `BentoConfig` object, which can be re-imported via the "Import JSON" button to restore any state precisely. This also makes configs inspectable and version-controllable.
+
+---
+
 ## 2026-04-11 — Plan B: Content & Styling
 
 ### StatBlock added to ContentBlock union (not a separate field)

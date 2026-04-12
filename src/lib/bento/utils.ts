@@ -1,5 +1,19 @@
 import type { BentoCell, BentoConfig } from "./types";
 
+// ─── URL Sharing ──────────────────────────────────────────────────────────────
+
+export function encodeConfig(config: BentoConfig): string {
+  return btoa(encodeURIComponent(JSON.stringify(config)));
+}
+
+export function decodeConfig(encoded: string): BentoConfig | null {
+  try {
+    return JSON.parse(decodeURIComponent(atob(encoded)));
+  } catch {
+    return null;
+  }
+}
+
 export function isCellOccupied(
   col: number,
   row: number,

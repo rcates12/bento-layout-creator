@@ -28,7 +28,7 @@
 | JSON import / export                                         | Done   |
 | Custom user-defined presets                                  | Done   |
 | PNG export                                                   | Done   |
-| Multi-select cells                                           | Done   |
+| Multi-select cells (shift-click, bulk delete, bulk color)    | Done   |
 | `npm run build` passes (0 errors, 0 warnings)               | Done   |
 
 ---
@@ -61,20 +61,9 @@
 
 ---
 
-| Task                                                         | Status |
-|--------------------------------------------------------------|--------|
-| Two-click confirm for Reset (header) and Delete (sidebar)    | Done   |
-| Two-key confirm for Delete/Backspace keyboard shortcut       | Done   |
-| Copy / Paste cell style (bgColor, bgImage, borderRadius)     | Done   |
-| Arrow-key cell navigation (←/→/↑/↓)                         | Done   |
-| Live span HUD badge during drag & resize                     | Done   |
-| Recently used colors row in color picker (session-only)      | Done   |
-| `findAdjacentCell` helper in `lib/bento/utils.ts`            | Done   |
-| `npm run build` passes (0 errors, 0 warnings)                | Done   |
-
 ---
 
-## Previous Milestones
+## Older Milestones
 
 - Milestone 0 — Repository created (COMPLETE)
 - Milestone 1 — Scaffold + Core Builder (COMPLETE)
@@ -100,14 +89,16 @@ src/
     page.tsx            — Server Component shell → <BentoEditor />
   components/
     bento/
-      BentoEditor.tsx   — "use client"; useReducer state (all actions), full layout
+      BentoEditor.tsx   — "use client"; useReducer state (all actions), full layout,
+                          URL hash sync, Share button, Import JSON modal, bulk action bar
       BentoGrid.tsx     — DndContext, drag handlers, resize handlers, ghost tiles,
-                          drop preview, BentoCell orchestration
-      BentoCell.tsx     — Draggable cell with drag handle, delete button,
-                          resize handle, grain texture overlay
+                          drop preview, BentoCell orchestration, gridRef forwarding
+      BentoCell.tsx     — Draggable cell with drag handle, delete button, resize handle,
+                          multi-select amber ring, shift-click support
       GridControls.tsx  — cols/rows/gap inputs, earth-tone styled
       CellControls.tsx  — position/span/label/color picker/delete, overlap-aware
-      CodeOutput.tsx    — syntax-highlighted output + copy-to-clipboard
+      CodeOutput.tsx    — syntax-highlighted output + copy + JSON tab + PNG export
+      PresetPicker.tsx  — built-in presets + custom preset save/delete
   lib/
     bento/
       types.ts          — BentoConfig, GridConfig, BentoCell (+ bgGradient, borderWidth, borderColor,
@@ -116,9 +107,10 @@ src/
       generator.ts      — generateCode(config): string (pure, no React)
       utils.ts          — clampCell, findNextPosition, hasOverlap,
                           getEmptyPositions, generateId, GAP_PX,
-                          findAdjacentCell
+                          findAdjacentCell, encodeConfig, decodeConfig
       theme.ts          — EARTH_TONES palette, DEFAULT_CELL_BG, INITIAL_CELL_COLORS
       gridCollision.ts  — pointerToGridPosition(pointer, gridRect, grid, gapPx)
+      presets.ts        — PRESETS, BentoPreset type, loadCustomPresets, saveCustomPresets
 docs/
   SPEC.md             — canonical feature spec (updated with Phase 2)
   DECISIONS.md        — all decisions logged
@@ -126,26 +118,26 @@ docs/
   WORKFLOW.md         — Ralph Loop + anti-context-rot rules
 ```
 
-## Dependency Added
+## Dependencies
 
 | Package | Version | Reason |
 |---------|---------|--------|
 | `@dnd-kit/core` | latest | Accessible drag-to-move with custom grid collision |
 | `@dnd-kit/utilities` | latest | CSS transform utilities for DragOverlay |
+| `html-to-image` | latest | PNG/image export from DOM element (dynamically imported) |
 
 ## Known Issues
 
-- Cell labels are plain text only (Phase 3: rich content — images, text blocks, buttons)
-- No undo/redo support
-- No localStorage persistence (state resets on page refresh)
 - `grid-rows-{n}` not in Tailwind v4 defaults beyond 6 — users may need to extend their config for rows > 6 in generated code
 - Drag activation requires 6px pointer movement — intentional to avoid accidental drags on click
+- PNG export of cells with `bgImage` (external URLs) may be blocked by CORS in some browsers
+- URL hash grows large for complex configs with many blocks — no compression applied (by design, see DECISIONS.md)
+- Multi-select amber ring and primary selection ring can coexist visually if a cell is both selected and multi-selected (low priority)
 
 ## Next Up (Milestone 4)
 
-1. Per-cell rich content: heading, body text, button
-2. Per-cell background image (URL input)
-3. Export as complete standalone HTML file (with Tailwind CDN link)
-4. localStorage persistence + auto-save
-5. Undo/redo history (wrapping reducer with history stack)
-6. Layout template presets (start from 5–6 predefined bento patterns)
+1. Undo/redo support for multi-select bulk operations (currently skipped in history)
+2. Multi-select drag — move all selected cells together
+3. Per-cell SVG/icon support
+4. Export presets as downloadable JSON files
+5. Keyboard navigation between cells (arrow keys)
