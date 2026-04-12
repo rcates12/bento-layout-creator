@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useCallback } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Type, Image as ImageIcon, MousePointerClick } from "lucide-react";
+import { Type, Image as ImageIcon, MousePointerClick, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type {
   BentoCell as BentoCellType,
@@ -11,6 +11,7 @@ import type {
   TextBlock,
   ImageBlock,
   ButtonBlock,
+  StatBlock,
 } from "@/lib/bento/types";
 import { DEFAULT_CELL_BG, PLACEHOLDER_IMAGE } from "@/lib/bento/theme";
 import { generateId } from "@/lib/bento/utils";
@@ -50,6 +51,36 @@ const ALIGN_CLASSES: Record<string, string> = {
 };
 const BTN_SIZE_CLASSES: Record<string, string> = {
   sm: "px-3 py-1 text-xs", md: "px-4 py-1.5 text-sm", lg: "px-5 py-2 text-base",
+};
+
+// ─── Cell-level shadow styles ─────────────────────────────────────────────────
+
+const CELL_SHADOW_STYLES: Record<string, string> = {
+  none: "none",
+  sm:   "0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4)",
+  md:   "0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.5)",
+  lg:   "0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.6)",
+  xl:   "0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.7)",
+};
+
+// ─── Cell padding / content-align maps ────────────────────────────────────────
+
+const CELL_PADDING_MAP: Record<string, string> = {
+  none: "p-0", sm: "p-2", md: "p-3", lg: "p-5",
+};
+
+const CELL_ALIGN_MAP: Record<string, string> = {
+  start: "justify-start", center: "justify-center", end: "justify-end",
+};
+
+// ─── Animation class map ──────────────────────────────────────────────────────
+
+const CELL_ANIM_CLASS: Record<string, string> = {
+  none: "",
+  "fade-in":    "bento-anim-fade-in",
+  "slide-up":   "bento-anim-slide-up",
+  "slide-right":"bento-anim-slide-right",
+  pop:          "bento-anim-pop",
 };
 
 // ─── Block renderers ──────────────────────────────────────────────────────────
@@ -149,10 +180,32 @@ function RenderButtonBlock({ block }: { block: ButtonBlock }) {
   );
 }
 
+function RenderStatBlock({ block }: { block: StatBlock }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div
+        className="text-3xl font-bold leading-none tracking-tight"
+        style={block.valueColor ? { color: block.valueColor } : { color: "rgba(255,255,255,0.95)" }}
+      >
+        {block.prefix ?? ""}{block.value || <span className="opacity-30 italic text-xl">Value</span>}{block.suffix ?? ""}
+      </div>
+      {block.label ? (
+        <div
+          className="text-xs font-medium leading-snug"
+          style={block.labelColor ? { color: block.labelColor } : { color: "rgba(255,255,255,0.55)" }}
+        >
+          {block.label}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function RenderBlock({ block }: { block: ContentBlock }) {
   if (block.type === "text") return <RenderTextBlock block={block} />;
   if (block.type === "image") return <RenderImageBlock block={block} />;
   if (block.type === "button") return <RenderButtonBlock block={block} />;
+  if (block.type === "stat") return <RenderStatBlock block={block} />;
   return null;
 }
 
@@ -227,20 +280,34 @@ export function BentoCell({
   const label = cell.label || `Cell ${index + 1}`;
   const radiusClass = RADIUS_CLASSES[cell.borderRadius ?? "2xl"];
   const hasBlocks = (cell.blocks?.length ?? 0) > 0;
+  const hasCustomBorder = (cell.borderWidth ?? 0) > 0;
+  const animClass = CELL_ANIM_CLASS[cell.animation ?? "none"] ?? "";
+  const paddingClass = CELL_PADDING_MAP[cell.padding ?? "md"] ?? "p-3";
+  const alignClass = CELL_ALIGN_MAP[cell.contentAlign ?? "start"] ?? "justify-start";
 
   const cellStyle: React.CSSProperties = {
     gridColumn: `${cell.colStart} / span ${cell.colSpan}`,
     gridRow: `${cell.rowStart} / span ${cell.rowSpan}`,
-    backgroundColor: cell.bgColor ?? DEFAULT_CELL_BG,
+    backgroundColor: cell.bgGradient ? undefined : (cell.bgColor ?? DEFAULT_CELL_BG),
     opacity: isDragging ? 0.15 : 1,
     zIndex: isSelected ? 2 : 1,
     position: "relative",
   };
 
-  if (cell.bgImage) {
+  if (cell.bgGradient) {
+    cellStyle.backgroundImage = `linear-gradient(${cell.bgGradient.angle}deg, ${cell.bgGradient.stops[0]}, ${cell.bgGradient.stops[1]})`;
+  } else if (cell.bgImage) {
     cellStyle.backgroundImage = `url(${cell.bgImage})`;
     cellStyle.backgroundSize = "cover";
     cellStyle.backgroundPosition = "center";
+  }
+
+  if (hasCustomBorder) {
+    cellStyle.border = `${cell.borderWidth}px solid ${cell.borderColor ?? "#ffffff"}`;
+  }
+
+  if (cell.shadow && cell.shadow !== "none") {
+    cellStyle.boxShadow = CELL_SHADOW_STYLES[cell.shadow] ?? "none";
   }
 
   function handleAddBlock(type: ContentBlock["type"]) {
@@ -251,6 +318,8 @@ export function BentoCell({
       onAddBlock({ id: generateId(), type: "image", src: PLACEHOLDER_IMAGE, fit: "cover" });
     } else if (type === "button") {
       onAddBlock({ id: generateId(), type: "button", label: "Click me", variant: "solid", size: "md" });
+    } else if (type === "stat") {
+      onAddBlock({ id: generateId(), type: "stat", value: "42K", label: "Label" });
     }
   }
 
@@ -259,13 +328,15 @@ export function BentoCell({
       ref={mergedRef}
       style={cellStyle}
       className={[
-        "group relative flex flex-col overflow-hidden border",
+        "group relative flex flex-col overflow-hidden",
+        hasCustomBorder ? "" : "border",
         radiusClass,
+        animClass,
         "touch-manipulation select-none",
         "transition-[border-color,box-shadow] duration-150",
         isSelected
           ? "border-accent ring-2 ring-accent/50 ring-offset-2 ring-offset-canvas"
-          : "border-white/[0.07] hover:border-white/[0.16]",
+          : hasCustomBorder ? "" : "border-white/[0.07] hover:border-white/[0.16]",
       ].join(" ")}
       onClick={onClick}
       onKeyDown={(e) => {
@@ -327,7 +398,7 @@ export function BentoCell({
       </Button>
 
       {/* Cell content area */}
-      <div className="relative z-[2] flex flex-1 flex-col gap-2 p-3 pt-7 pointer-events-none">
+      <div className={`relative z-[2] flex flex-1 flex-col gap-2 ${paddingClass} pt-7 pointer-events-none ${alignClass}`}>
         {hasBlocks ? (
           <>
             {cell.blocks!.map((block) => (
@@ -395,6 +466,17 @@ export function BentoCell({
           >
             <MousePointerClick size={15} aria-hidden="true" />
           </Button>
+          <div className="h-4 w-px bg-white/15" aria-hidden="true" />
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Add stat block"
+            aria-label="Add stat block"
+            onClick={(e) => { e.stopPropagation(); handleAddBlock("stat"); }}
+            className="rounded-full text-violet-300/70 hover:bg-white/10 hover:text-violet-300"
+          >
+            <TrendingUp size={15} aria-hidden="true" />
+          </Button>
         </div>
       )}
 
@@ -461,24 +543,40 @@ export function BentoCellOverlay({
   const radiusClass = RADIUS_CLASSES[cell.borderRadius ?? "2xl"];
   const hasBlocks = (cell.blocks?.length ?? 0) > 0;
 
+  const hasOverlayCustomBorder = (cell.borderWidth ?? 0) > 0;
+  const overlayPadding = CELL_PADDING_MAP[cell.padding ?? "md"] ?? "p-3";
+  const overlayAlign = CELL_ALIGN_MAP[cell.contentAlign ?? "start"] ?? "justify-start";
+
   const overlayStyle: React.CSSProperties = {
-    backgroundColor: cell.bgColor ?? DEFAULT_CELL_BG,
+    backgroundColor: cell.bgGradient ? undefined : (cell.bgColor ?? DEFAULT_CELL_BG),
   };
-  if (cell.bgImage) {
+  if (cell.bgGradient) {
+    overlayStyle.backgroundImage = `linear-gradient(${cell.bgGradient.angle}deg, ${cell.bgGradient.stops[0]}, ${cell.bgGradient.stops[1]})`;
+  } else if (cell.bgImage) {
     overlayStyle.backgroundImage = `url(${cell.bgImage})`;
     overlayStyle.backgroundSize = "cover";
     overlayStyle.backgroundPosition = "center";
+  }
+  if (hasOverlayCustomBorder) {
+    overlayStyle.border = `${cell.borderWidth}px solid ${cell.borderColor ?? "#ffffff"}`;
+  }
+  if (cell.shadow && cell.shadow !== "none") {
+    overlayStyle.boxShadow = CELL_SHADOW_STYLES[cell.shadow] ?? "none";
   }
 
   return (
     <div
       style={overlayStyle}
-      className={`relative flex flex-col gap-2 overflow-hidden border border-white/20 p-3 pt-7 shadow-2xl ring-2 ring-accent/50 ring-offset-2 ring-offset-canvas ${radiusClass}`}
+      className={[
+        "relative flex flex-col gap-2 overflow-hidden shadow-2xl ring-2 ring-accent/50 ring-offset-2 ring-offset-canvas",
+        hasOverlayCustomBorder ? "" : "border border-white/20",
+        overlayPadding, "pt-7", overlayAlign, radiusClass,
+      ].join(" ")}
     >
-      {cell.bgImage && (
+      {(!cell.bgGradient && cell.bgImage) && (
         <div className="pointer-events-none absolute inset-0 bg-black/40" aria-hidden="true" />
       )}
-      <div className="relative z-[1] flex flex-col gap-1.5">
+      <div className={`relative z-[1] flex flex-col gap-1.5 ${overlayAlign}`}>
         {hasBlocks ? (
           cell.blocks!.slice(0, 2).map((block) =>
             block.type === "text" ? (

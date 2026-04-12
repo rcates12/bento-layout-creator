@@ -6,7 +6,36 @@
 
 ## Current Milestone
 
-**Milestone 3 — Plan A: Polish & UX** (COMPLETE)
+**Milestone 3 — Plans A + B + C: All features merged** (COMPLETE)
+
+**Plan A — Polish & UX** (COMPLETE) · **Plan B — Content & Styling** (COMPLETE) · **Plan C — Sharing & Productivity** (COMPLETE)
+
+| Task                                                         | Status |
+|--------------------------------------------------------------|--------|
+| Two-click confirm for Reset and Delete buttons               | Done   |
+| Copy / Paste cell style clipboard                            | Done   |
+| Arrow-key cell navigation                                    | Done   |
+| Live span HUD badge during drag & resize                     | Done   |
+| Recently used colors row in color picker                     | Done   |
+| `GradientConfig` type + `bgGradient` on `BentoCell`         | Done   |
+| Gradient toggle + color pickers + angle input in CellControls| Done   |
+| `borderWidth`, `borderColor`, `shadow` on `BentoCell`       | Done   |
+| Border/shadow controls, preview, and generator output        | Done   |
+| `StatBlock` type + editor + generator renderers              | Done   |
+| `padding` + `contentAlign` on `BentoCell`                   | Done   |
+| `CellAnimation` type + keyframes + animation selector        | Done   |
+| URL sharing (grid state encoded in URL)                      | Done   |
+| JSON import / export                                         | Done   |
+| Custom user-defined presets                                  | Done   |
+| PNG export                                                   | Done   |
+| Multi-select cells                                           | Done   |
+| `npm run build` passes (0 errors, 0 warnings)               | Done   |
+
+---
+
+## Previous Milestones
+
+**Milestone 2 — Interactions + Design Identity** (COMPLETE)
 
 | Task                                                         | Status |
 |--------------------------------------------------------------|--------|
@@ -81,7 +110,9 @@ src/
       CodeOutput.tsx    — syntax-highlighted output + copy-to-clipboard
   lib/
     bento/
-      types.ts          — BentoConfig, GridConfig, BentoCell (+ bgColor)
+      types.ts          — BentoConfig, GridConfig, BentoCell (+ bgGradient, borderWidth, borderColor,
+                          shadow, padding, contentAlign, animation); GradientConfig, CellAnimation,
+                          StatBlock types; StatBlock added to ContentBlock union
       generator.ts      — generateCode(config): string (pure, no React)
       utils.ts          — clampCell, findNextPosition, hasOverlap,
                           getEmptyPositions, generateId, GAP_PX,
@@ -110,7 +141,7 @@ docs/
 - `grid-rows-{n}` not in Tailwind v4 defaults beyond 6 — users may need to extend their config for rows > 6 in generated code
 - Drag activation requires 6px pointer movement — intentional to avoid accidental drags on click
 
-## Next Up (Milestone 3 — Phase 3 Content)
+## Next Up (Milestone 4)
 
 1. Per-cell rich content: heading, body text, button
 2. Per-cell background image (URL input)

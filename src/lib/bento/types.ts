@@ -7,6 +7,18 @@ export interface GridConfig {
 export type BorderRadius = "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 export type ShadowLevel = "none" | "sm" | "md" | "lg" | "xl";
 
+// ─── Gradient ──────────────────────────────────────────────────────────────
+
+export interface GradientConfig {
+  type: "linear";
+  angle: number;    // 0–360 degrees
+  stops: [string, string]; // two hex colors
+}
+
+// ─── Cell animation ────────────────────────────────────────────────────────
+
+export type CellAnimation = "none" | "fade-in" | "slide-up" | "slide-right" | "pop";
+
 // ─── Content block types ───────────────────────────────────────────────────
 
 export type FontSize = "xs" | "sm" | "base" | "lg" | "xl" | "2xl" | "3xl";
@@ -51,7 +63,18 @@ export interface ButtonBlock {
   fullWidth?: boolean;
 }
 
-export type ContentBlock = TextBlock | ImageBlock | ButtonBlock;
+export interface StatBlock {
+  id: string;
+  type: "stat";
+  value: string;       // e.g. "42K"
+  label?: string;      // e.g. "Monthly Users"
+  prefix?: string;     // e.g. "$"
+  suffix?: string;     // e.g. "%"
+  valueColor?: string;
+  labelColor?: string;
+}
+
+export type ContentBlock = TextBlock | ImageBlock | ButtonBlock | StatBlock;
 
 // ─── Cell ─────────────────────────────────────────────────────────────────
 
@@ -63,9 +86,16 @@ export interface BentoCell {
   rowSpan: number;
   label: string;
   bgColor?: string;
+  bgGradient?: GradientConfig;
   bgImage?: string;
   blocks?: ContentBlock[];
   borderRadius?: BorderRadius;
+  borderWidth?: number;  // 0–4 px
+  borderColor?: string;  // hex
+  shadow?: ShadowLevel;
+  padding?: "none" | "sm" | "md" | "lg";
+  contentAlign?: "start" | "center" | "end";
+  animation?: CellAnimation;
 }
 
 export interface BentoConfig {
