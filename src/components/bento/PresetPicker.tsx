@@ -125,6 +125,18 @@ export function PresetPicker({
     } else {
       onApplyPreset(preset.config);
     }
+
+    if (typeof pendo !== "undefined") {
+      pendo.track("preset_applied", {
+        presetId: preset.id,
+        presetName: preset.name,
+        presetType: "built_in",
+        cellCount: preset.isRegular ? 0 : preset.config.cells.length,
+        gridCols: preset.isRegular ? 0 : preset.config.grid.cols,
+        gridRows: preset.isRegular ? 0 : preset.config.grid.rows,
+      });
+    }
+
     setOpen(false);
   }
 
@@ -136,6 +148,17 @@ export function PresetPicker({
       description: "Custom preset",
       config: currentConfig,
     });
+
+    if (typeof pendo !== "undefined") {
+      pendo.track("custom_preset_saved", {
+        presetName: saveName.trim(),
+        cellCount: currentConfig.cells.length,
+        gridCols: currentConfig.grid.cols,
+        gridRows: currentConfig.grid.rows,
+        hasContentBlocks: currentConfig.cells.some((c) => (c.blocks?.length ?? 0) > 0),
+      });
+    }
+
     setSaveName("");
     setShowSaveForm(false);
   }
@@ -241,7 +264,20 @@ export function PresetPicker({
                       <button
                         type="button"
                         aria-label={`Apply custom preset: ${preset.name}`}
-                        onClick={() => { onApplyPreset(preset.config); setOpen(false); }}
+                        onClick={() => {
+                          if (typeof pendo !== "undefined") {
+                            pendo.track("preset_applied", {
+                              presetId: preset.id,
+                              presetName: preset.name,
+                              presetType: "custom",
+                              cellCount: preset.config.cells.length,
+                              gridCols: preset.config.grid.cols,
+                              gridRows: preset.config.grid.rows,
+                            });
+                          }
+                          onApplyPreset(preset.config);
+                          setOpen(false);
+                        }}
                         className="group flex w-full flex-col gap-2 rounded-lg border border-rim/40 bg-canvas p-2 text-muted/40 transition-all duration-150 hover:border-rim-hi hover:text-muted/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rim-hi active:scale-[0.97]"
                       >
                         <div className="relative w-full overflow-hidden rounded" style={{ aspectRatio: "3 / 2" }}>
@@ -254,7 +290,15 @@ export function PresetPicker({
                       {onDeleteCustomPreset && (
                         <button
                           type="button"
-                          onClick={(e) => { e.stopPropagation(); onDeleteCustomPreset(preset.id); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (typeof pendo !== "undefined") {
+                              pendo.track("custom_preset_deleted", {
+                                presetId: preset.id,
+                              });
+                            }
+                            onDeleteCustomPreset(preset.id);
+                          }}
                           aria-label={`Delete custom preset ${preset.name}`}
                           className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded bg-black/40 text-white/40 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-900/60 hover:text-white"
                         >

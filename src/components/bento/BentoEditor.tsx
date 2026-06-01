@@ -680,7 +680,16 @@ export function BentoEditor() {
     }
     setShareCopied(true);
     setTimeout(() => setShareCopied(false), 2000);
-  }, []);
+
+    if (typeof pendo !== "undefined") {
+      pendo.track("layout_shared", {
+        cellCount: config.cells.length,
+        gridCols: config.grid.cols,
+        gridRows: config.grid.rows,
+        urlLength: window.location.href.length,
+      });
+    }
+  }, [config]);
 
   // JSON Import handler
   const handleImport = useCallback(() => {
@@ -689,13 +698,35 @@ export function BentoEditor() {
       const parsed = JSON.parse(importText);
       if (!parsed?.grid?.cols || !Array.isArray(parsed?.cells)) {
         setImportError("Invalid layout: must have grid and cells fields.");
+        if (typeof pendo !== "undefined") {
+          pendo.track("layout_import_failed", {
+            errorType: "invalid_structure",
+            inputLength: importText.length,
+          });
+        }
         return;
       }
       dispatch({ type: "LOAD_PRESET", payload: parsed as BentoConfig });
       setShowImport(false);
       setImportText("");
+
+      if (typeof pendo !== "undefined") {
+        const importedConfig = parsed as BentoConfig;
+        pendo.track("layout_imported", {
+          cellCount: importedConfig.cells?.length ?? 0,
+          gridCols: importedConfig.grid?.cols ?? 0,
+          gridRows: importedConfig.grid?.rows ?? 0,
+          hasContentBlocks: importedConfig.cells?.some((c: BentoCell) => (c.blocks?.length ?? 0) > 0) ?? false,
+        });
+      }
     } catch {
       setImportError("Invalid JSON — please check for syntax errors.");
+      if (typeof pendo !== "undefined") {
+        pendo.track("layout_import_failed", {
+          errorType: "invalid_json",
+          inputLength: importText.length,
+        });
+      }
     }
   }, [importText, dispatch]);
 
@@ -736,6 +767,14 @@ export function BentoEditor() {
         if (selectedCellIds.length > 1) {
           if (e.key === "Delete" || e.key === "Backspace") {
             e.preventDefault();
+            if (typeof pendo !== "undefined") {
+              pendo.track("bulk_cells_deleted", {
+                deletedCellCount: selectedCellIds.length,
+                remainingCellCount: config.cells.length - selectedCellIds.length,
+                gridCols: config.grid.cols,
+                gridRows: config.grid.rows,
+              });
+            }
             dispatch({ type: "BULK_DELETE_CELLS" });
             return;
           }
@@ -835,7 +874,16 @@ export function BentoEditor() {
             onApplyPreset={(presetConfig) =>
               dispatch({ type: "LOAD_PRESET", payload: presetConfig })
             }
-            onFillRegular={() => dispatch({ type: "FILL_REGULAR" })}
+            onFillRegular={() => {
+              if (typeof pendo !== "undefined") {
+                pendo.track("grid_filled_regular", {
+                  gridCols: config.grid.cols,
+                  gridRows: config.grid.rows,
+                  generatedCellCount: config.grid.cols * config.grid.rows,
+                });
+              }
+              dispatch({ type: "FILL_REGULAR" });
+            }}
             customPresets={customPresets}
             currentConfig={config}
             onSavePreset={(preset) => {
@@ -961,6 +1009,15 @@ export function BentoEditor() {
               if (confirmReset) {
                 if (confirmResetTimerRef.current) clearTimeout(confirmResetTimerRef.current);
                 setConfirmReset(false);
+
+                if (typeof pendo !== "undefined") {
+                  pendo.track("layout_reset", {
+                    previousCellCount: config.cells.length,
+                    previousGridCols: config.grid.cols,
+                    previousGridRows: config.grid.rows,
+                  });
+                }
+
                 dispatch({ type: "RESET" });
               } else {
                 setConfirmReset(true);
@@ -1092,6 +1149,14 @@ export function BentoEditor() {
                       type: "UPDATE_CELL",
                       payload: { id: selectedCell.id, updates: styleClipboardRef.current },
                     });
+
+                    if (typeof pendo !== "undefined") {
+                      pendo.track("cell_style_pasted", {
+                        hasBackgroundColor: !!styleClipboardRef.current.bgColor,
+                        hasBackgroundImage: !!styleClipboardRef.current.bgImage,
+                        hasBorderRadius: styleClipboardRef.current.borderRadius !== undefined,
+                      });
+                    }
                   }
                 }}
                 hasStyleClipboard={hasStyleClipboard}
@@ -1152,14 +1217,32 @@ export function BentoEditor() {
                   <input
                     type="color"
                     defaultValue="#1e1b4b"
-                    onChange={(e) => dispatch({ type: "BULK_SET_BG_COLOR", payload: e.target.value })}
+                    onChange={(e) => {
+                      if (typeof pendo !== "undefined") {
+                        pendo.track("bulk_color_applied", {
+                          affectedCellCount: selectedCellIds.length,
+                          bgColor: e.target.value,
+                        });
+                      }
+                      dispatch({ type: "BULK_SET_BG_COLOR", payload: e.target.value });
+                    }}
                     className="h-6 w-10 cursor-pointer rounded border-0 bg-transparent p-0"
                     aria-label="Bulk background color"
                   />
                 </label>
                 <button
                   type="button"
-                  onClick={() => dispatch({ type: "BULK_DELETE_CELLS" })}
+                  onClick={() => {
+                    if (typeof pendo !== "undefined") {
+                      pendo.track("bulk_cells_deleted", {
+                        deletedCellCount: selectedCellIds.length,
+                        remainingCellCount: config.cells.length - selectedCellIds.length,
+                        gridCols: config.grid.cols,
+                        gridRows: config.grid.rows,
+                      });
+                    }
+                    dispatch({ type: "BULK_DELETE_CELLS" });
+                  }}
                   className="rounded-lg border border-red-500/40 bg-red-500/15 px-2.5 py-1 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/25"
                 >
                   Delete all
@@ -1311,6 +1394,9 @@ export function BentoEditor() {
                 jsonCode={generatedJSON}
                 gridRef={gridRef}
                 panelMode
+                cellCount={config.cells.length}
+                gridCols={config.grid.cols}
+                gridRows={config.grid.rows}
               />
             </div>
           </aside>

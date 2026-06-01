@@ -118,11 +118,15 @@ interface CodeOutputProps {
   gridRef?: React.RefObject<HTMLDivElement | null>;
   /** When true, strips outer border/rounding and merges copy button into the tabs row */
   panelMode?: boolean;
+  /** Tracking metadata passed from parent */
+  cellCount?: number;
+  gridCols?: number;
+  gridRows?: number;
 }
 
 type PixelRatio = 1 | 2 | 3;
 
-export function CodeOutput({ htmlCode, standaloneCode, jsxCode, jsonCode, gridRef, panelMode = false }: CodeOutputProps) {
+export function CodeOutput({ htmlCode, standaloneCode, jsxCode, jsonCode, gridRef, panelMode = false, cellCount, gridCols, gridRows }: CodeOutputProps) {
   const [activeTab, setActiveTab] = useState<ExportTab>("html");
   const [copied, setCopied] = useState(false);
   const [pngExporting, setPngExporting] = useState(false);
@@ -150,7 +154,17 @@ export function CodeOutput({ htmlCode, standaloneCode, jsxCode, jsonCode, gridRe
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }, [code]);
+
+    if (typeof pendo !== "undefined") {
+      pendo.track("code_copied_to_clipboard", {
+        exportFormat: activeTab,
+        codeLength: code.length,
+        cellCount: cellCount ?? 0,
+        gridCols: gridCols ?? 0,
+        gridRows: gridRows ?? 0,
+      });
+    }
+  }, [code, activeTab, cellCount, gridCols, gridRows]);
 
   const handleDownloadPng = useCallback(async () => {
     if (!gridRef?.current || exportingRef.current) return;
@@ -163,13 +177,22 @@ export function CodeOutput({ htmlCode, standaloneCode, jsxCode, jsonCode, gridRe
       link.download = `lintel-layout-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
+
+      if (typeof pendo !== "undefined") {
+        pendo.track("png_exported", {
+          pixelRatio,
+          cellCount: cellCount ?? 0,
+          gridCols: gridCols ?? 0,
+          gridRows: gridRows ?? 0,
+        });
+      }
     } catch (err) {
       console.error("PNG export failed:", err);
     } finally {
       setPngExporting(false);
       exportingRef.current = false;
     }
-  }, [gridRef, pixelRatio]);
+  }, [gridRef, pixelRatio, cellCount, gridCols, gridRows]);
 
   const tokens = activeTab !== "json" ? tokenize(code) : null;
   const activeTabInfo = TABS.find((t) => t.id === activeTab)!;
